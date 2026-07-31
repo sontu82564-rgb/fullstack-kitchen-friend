@@ -10,6 +10,7 @@ function Register() {
     email: "",
     password: "",
     confirmPassword: "",
+    role: "buyer",
   });
 
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,7 @@ function Register() {
     event.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert("checkk your password before enterd.");
+      alert("Passwords do not match.");
       return;
     }
 
@@ -36,113 +37,155 @@ function Register() {
     try {
       const response = await axios.post(
         "http://localhost:9003/user/register",
-        // console.log(object);
         {
           name: formData.name,
           email: formData.email,
           password: formData.password,
+          role: formData.role,
         }
       );
 
-      console.log("Register response:", response.data);
+      console.log("Register Response:", response.data);
+
+      alert("Registration successful! Please verify your email.");
 
       navigate("/check-email");
+
     } catch (error) {
-      console.error("Registration error:", error);
 
-      const message =
+      console.error("Registration Error:", error);
+
+      alert(
         error.response?.data?.message ||
-        "Registration failed.";
+        "Registration failed."
+      );
 
-      alert(message);
     } finally {
+
       setLoading(false);
+
     }
   };
 
   return (
-    <main>
-      <h1>Create Your Account</h1>
+    <main
+      style={{
+        maxWidth: "450px",
+        margin: "50px auto",
+        padding: "30px",
+        border: "1px solid #ddd",
+        borderRadius: "10px",
+      }}
+    >
+      <h1 style={{ textAlign: "center" }}>
+        Create Your Account
+      </h1>
 
       <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="name">
-            Full Name
-          </label>
+
+        <div style={{ marginBottom: "15px" }}>
+          <label>Full Name</label>
 
           <input
-            id="name"
-            name="name"
             type="text"
+            name="name"
             value={formData.name}
             onChange={handleChange}
             required
+            style={{ width: "100%", padding: "10px" }}
           />
         </div>
 
-        <div>
-          <label htmlFor="email">
-            Email
-          </label>
+        <div style={{ marginBottom: "15px" }}>
+          <label>Email</label>
 
           <input
-            id="email"
-            name="email"
             type="email"
+            name="email"
             value={formData.email}
             onChange={handleChange}
             required
+            style={{ width: "100%", padding: "10px" }}
           />
         </div>
 
-        <div>
-          <label htmlFor="password">
-            Password
-          </label>
+        <div style={{ marginBottom: "15px" }}>
+          <label>Password</label>
 
           <input
-            id="password"
-            name="password"
             type="password"
+            name="password"
             value={formData.password}
             onChange={handleChange}
             minLength={6}
             required
+            style={{ width: "100%", padding: "10px" }}
           />
         </div>
 
-        <div>
-          <label htmlFor="confirmPassword">
-            Confirm Password
-          </label>
+        <div style={{ marginBottom: "15px" }}>
+          <label>Confirm Password</label>
 
           <input
-            id="confirmPassword"
-            name="confirmPassword"
             type="password"
+            name="confirmPassword"
             value={formData.confirmPassword}
             onChange={handleChange}
             minLength={6}
             required
+            style={{ width: "100%", padding: "10px" }}
           />
+        </div>
+
+        <div style={{ marginBottom: "20px" }}>
+          <label>Account Type</label>
+
+          <select
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            style={{
+              width: "100%",
+              padding: "10px",
+            }}
+          >
+            <option value="buyer">🛒 Buyer</option>
+            <option value="seller">🏪 Seller</option>
+          </select>
         </div>
 
         <button
           type="submit"
           disabled={loading}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: "#ff5a1f",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            borderRadius: "6px",
+          }}
         >
           {loading
-            ? "Sending Verification Email..."
+            ? "Creating Account..."
             : "Create Account"}
         </button>
+
       </form>
 
-      <p>
+      <p
+        style={{
+          textAlign: "center",
+          marginTop: "20px",
+        }}
+      >
         Already have an account?{" "}
         <Link to="/login">
           Login
         </Link>
       </p>
+
     </main>
   );
 }

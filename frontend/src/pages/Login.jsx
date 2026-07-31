@@ -40,27 +40,32 @@ function Login() {
 
       console.log("Login Response:", response.data);
 
-      localStorage.setItem(
-        "user",
-        JSON.stringify(response.data.user)
-      );
+      const { user, token, message } = response.data;
 
-      alert(response.data.message);
+      // Save user
+      localStorage.setItem("user", JSON.stringify(user));
 
-      // Redirect to Products page
-      navigate("/products");
+      // Save token (if your backend returns it)
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+
+      alert(message);
+
+      // Redirect according to role
+      if (user.role === "seller") {
+        navigate("/seller/dashboard");
+      } else {
+        navigate("/products");
+      }
 
     } catch (error) {
-      console.error(
-        "Login Error:",
-        error.response?.data || error
-      );
+      console.error("Login Error:", error.response?.data || error);
 
       alert(
         error.response?.data?.message ||
-        "Login failed."
+        "Login failed. Please try again."
       );
-
     } finally {
       setLoading(false);
     }
@@ -69,27 +74,32 @@ function Login() {
   return (
     <>
       <style>{`
+        *{
+          box-sizing:border-box;
+        }
+
         .login-page{
-          min-height:calc(100vh - 70px);
+          min-height:100vh;
           display:flex;
           justify-content:center;
           align-items:center;
-          background:#f8f8f8;
-          padding:40px 20px;
+          background:#f4f4f4;
+          padding:20px;
         }
 
         .login-card{
           width:100%;
           max-width:420px;
-          background:white;
-          padding:40px;
+          background:#fff;
+          padding:35px;
           border-radius:10px;
-          box-shadow:0 10px 30px rgba(0,0,0,.08);
+          box-shadow:0 10px 25px rgba(0,0,0,.08);
         }
 
         .login-title{
           text-align:center;
           margin-bottom:30px;
+          color:#333;
         }
 
         .input-group{
@@ -105,21 +115,26 @@ function Login() {
         .input-group input{
           width:100%;
           padding:12px;
-          border:1px solid #ddd;
+          border:1px solid #ccc;
           border-radius:6px;
-          box-sizing:border-box;
+          font-size:15px;
         }
 
         .login-submit{
           width:100%;
           padding:14px;
+          border:none;
           background:#ff5a1f;
           color:white;
-          border:none;
+          font-size:16px;
+          font-weight:bold;
           border-radius:6px;
           cursor:pointer;
-          font-size:16px;
-          font-weight:600;
+          transition:.3s;
+        }
+
+        .login-submit:hover{
+          background:#e14b13;
         }
 
         .login-submit:disabled{
@@ -128,14 +143,18 @@ function Login() {
         }
 
         .signup-text{
-          text-align:center;
           margin-top:20px;
+          text-align:center;
         }
 
         .signup-link{
           color:#ff5a1f;
           text-decoration:none;
           font-weight:bold;
+        }
+
+        .signup-link:hover{
+          text-decoration:underline;
         }
       `}</style>
 
@@ -156,10 +175,10 @@ function Login() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                placeholder="Enter your email"
                 required
               />
             </div>
-
 
             <div className="input-group">
               <label>Password</label>
@@ -169,12 +188,13 @@ function Login() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                placeholder="Enter your password"
                 required
               />
             </div>
 
-
             <button
+              type="submit"
               className="login-submit"
               disabled={loading}
             >
@@ -182,7 +202,6 @@ function Login() {
             </button>
 
           </form>
-
 
           <p className="signup-text">
             Don't have an account?{" "}

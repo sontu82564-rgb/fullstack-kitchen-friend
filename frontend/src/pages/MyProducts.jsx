@@ -10,7 +10,7 @@ function MyProducts() {
 
 
   // Fetch seller products
-  const fetchMyProducts = async () => {
+  async function fetchMyProducts() {
 
     try {
 
@@ -22,15 +22,21 @@ function MyProducts() {
       );
 
 
+      console.log(
+        "My Products:",
+        response.data
+      );
+
+
       setProducts(
         response.data.products || []
       );
 
 
-    } catch(error) {
+    } catch (error) {
 
       console.log(
-        "Fetch error:",
+        "Fetch Products Error:",
         error.response?.data || error
       );
 
@@ -41,7 +47,8 @@ function MyProducts() {
 
     }
 
-  };
+  }
+
 
 
   useEffect(() => {
@@ -52,15 +59,16 @@ function MyProducts() {
 
 
 
-  // Delete product
-  const handleDelete = async (id) => {
 
-    const confirm = window.confirm(
-      "Delete this product?"
+  // Delete Product
+  async function handleDelete(id) {
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this product?"
     );
 
 
-    if(!confirm) return;
+    if (!confirmDelete) return;
 
 
     try {
@@ -75,12 +83,17 @@ function MyProducts() {
 
       alert(response.data.message);
 
+
       fetchMyProducts();
 
 
     } catch(error) {
 
-      console.log(error);
+      console.log(
+        "Delete Error:",
+        error.response?.data || error
+      );
+
 
       alert(
         error.response?.data?.message ||
@@ -89,22 +102,28 @@ function MyProducts() {
 
     }
 
-  };
+  }
 
 
 
 
-  // Update product
-  const handleUpdate = async(e)=>{
+  // Update Product
+  async function handleUpdate(e) {
 
     e.preventDefault();
 
 
-    try{
+    try {
 
       const response = await axios.put(
         `http://localhost:9003/user/products/${editProduct._id}`,
-        editProduct,
+        {
+          productName: editProduct.productName,
+          category: editProduct.category,
+          description: editProduct.description,
+          price: editProduct.price,
+          stock: editProduct.stock,
+        },
         {
           withCredentials:true,
         }
@@ -119,9 +138,13 @@ function MyProducts() {
       fetchMyProducts();
 
 
-    }catch(error){
+    } catch(error) {
 
-      console.log(error);
+      console.log(
+        "Update Error:",
+        error.response?.data || error
+      );
+
 
       alert(
         error.response?.data?.message ||
@@ -130,11 +153,12 @@ function MyProducts() {
 
     }
 
-  };
+  }
 
 
 
-  if(loading){
+
+  if (loading) {
 
     return (
       <h2 style={{textAlign:"center"}}>
@@ -155,12 +179,13 @@ function MyProducts() {
       </h1>
 
 
+
       {
         products.length === 0 ?
 
         (
           <h3>
-            No products added yet
+            No products found
           </h3>
         )
 
@@ -170,8 +195,10 @@ function MyProducts() {
 
         <div className="grid">
 
+
         {
-          products.map(product=>(
+          products.map((product)=>(
+
 
             <div
               className="card"
@@ -179,75 +206,76 @@ function MyProducts() {
             >
 
 
-            {
-              product.image &&
+              {
+                product.image &&
 
-              <img
-                src={
-                  `http://localhost:9003${product.image}`
-                }
-                alt={product.productName}
-              />
+                <img
+                  src={
+                    `http://localhost:9003${product.image}`
+                  }
+                  alt={product.productName}
+                />
 
-            }
-
-
-
-            <h2>
-              {product.productName}
-            </h2>
-
-
-            <p>
-              Category: {product.category}
-            </p>
-
-
-            <p>
-              {product.description}
-            </p>
-
-
-            <h3>
-              ₹{product.price}
-            </h3>
-
-
-            <p>
-              Stock: {product.stock}
-            </p>
+              }
 
 
 
-            <div className="buttons">
-
-              <button
-                onClick={()=>
-                  setEditProduct(product)
-                }
-              >
-                Edit
-              </button>
+              <h2>
+                {product.productName}
+              </h2>
 
 
+              <p>
+                Category: {product.category}
+              </p>
 
-              <button
-                className="delete"
-                onClick={()=>
-                  handleDelete(product._id)
-                }
-              >
-                Delete
-              </button>
+
+              <p>
+                {product.description}
+              </p>
+
+
+              <h3>
+                ₹{product.price}
+              </h3>
+
+
+              <p>
+                Stock: {product.stock}
+              </p>
+
+
+
+              <div className="buttons">
+
+                <button
+                  onClick={() =>
+                    setEditProduct(product)
+                  }
+                >
+                  Edit
+                </button>
+
+
+                <button
+                  className="delete"
+                  onClick={() =>
+                    handleDelete(product._id)
+                  }
+                >
+                  Delete
+                </button>
+
+
+              </div>
 
 
             </div>
 
-
-            </div>
 
           ))
         }
+
 
         </div>
 
@@ -261,6 +289,7 @@ function MyProducts() {
         editProduct &&
 
         <div className="edit-box">
+
 
           <h2>
             Edit Product
@@ -328,13 +357,13 @@ function MyProducts() {
 
 
             <button>
-              Update
+              Update Product
             </button>
 
 
             <button
               type="button"
-              onClick={()=>
+              onClick={() =>
                 setEditProduct(null)
               }
             >
@@ -343,6 +372,7 @@ function MyProducts() {
 
 
           </form>
+
 
         </div>
 
@@ -358,11 +388,9 @@ function MyProducts() {
  padding:20px;
 }
 
-
 h1{
  text-align:center;
 }
-
 
 .grid{
  display:grid;
@@ -371,14 +399,12 @@ h1{
  gap:25px;
 }
 
-
 .card{
  background:white;
  padding:20px;
  border-radius:12px;
  box-shadow:0 5px 20px rgba(0,0,0,.1);
 }
-
 
 .card img{
  width:100%;
@@ -387,43 +413,37 @@ h1{
  border-radius:10px;
 }
 
-
 .buttons{
  display:flex;
  gap:10px;
 }
 
-
 button{
  flex:1;
  padding:10px;
- border:none;
- cursor:pointer;
  background:#ff5a1f;
  color:white;
+ border:none;
+ cursor:pointer;
  border-radius:5px;
 }
-
 
 .delete{
  background:red;
 }
 
-
 .edit-box{
  margin-top:40px;
- background:#eee;
  padding:20px;
+ background:#eee;
  border-radius:10px;
 }
-
 
 .edit-box form{
  display:flex;
  flex-direction:column;
  gap:15px;
 }
-
 
 input,textarea{
  padding:12px;
