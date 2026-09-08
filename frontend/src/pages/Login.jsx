@@ -1,70 +1,110 @@
-import { Link, useNavigate } from "react-router-dom";
+
 import { useState } from "react";
 import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    setLoading(true);
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
+    }
 
     try {
+      setLoading(true);
+
       const response = await axios.post(
         "http://localhost:9003/user/login",
         {
-          email: formData.email,
-          password: formData.password,
+          email: email.trim().toLowerCase(),
+          password,
         },
         {
           withCredentials: true,
         }
       );
 
-      console.log("Login Response:", response.data);
+      console.log("LOGIN RESPONSE:", response.data);
 
-      const { user, token, message } = response.data;
-
-      // Save user
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // Save token (if your backend returns it)
-      if (token) {
-        localStorage.setItem("token", token);
+      if (!response.data.success) {
+        alert(response.data.message || "Login failed");
+        return;
       }
 
-      alert(message);
+      // Get user information from backend
+      const user = response.data.user;
+
+      console.log("LOGGED IN USER:", user);
+
+      if (!user) {
+        alert(
+          "Login successful, but user information was not returned by the server."
+        );
+        return;
+      }
+
+      if (!user.role) {
+        alert(
+          "User role is missing. Please check your backend login controller."
+        );
+        return;
+      }
+
+      /*
+        IMPORTANT:
+
+        JWT is NOT stored in localStorage.
+
+        JWT is stored by the backend
+        inside an HTTP-only cookie.
+
+        We only store non-sensitive user information
+        needed by the frontend for role-based navigation.
+      */
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: user.id || user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        })
+      );
+
+      console.log(
+        "USER SAVED:",
+        JSON.parse(localStorage.getItem("user"))
+      );
+
+      alert("Login successful!");
 
       // Redirect according to role
       if (user.role === "seller") {
         navigate("/seller/dashboard");
-      } else {
+      } else if (user.role === "buyer") {
         navigate("/products");
+      } else {
+        alert("Unknown user role.");
+        navigate("/");
       }
-
     } catch (error) {
-      console.error("Login Error:", error.response?.data || error);
+      console.error(
+        "LOGIN ERROR:",
+        error.response?.data || error
+      );
 
       alert(
         error.response?.data?.message ||
-        "Login failed. Please try again."
+          "Login failed"
       );
     } finally {
       setLoading(false);
@@ -72,151 +112,238 @@ function Login() {
   };
 
   return (
-    <>
+    <div className="login-page">
+      <div className="login-card">
+        <div className="logo">
+          🛒
+        </div>
+
+        <h1>Welcome Back</h1>
+
+        <p className="subtitle">
+          Login to your Kitchen Friend account
+        </p>
+
+        <form onSubmit={handleLogin}>
+          <div className="form-group">
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="login-btn"
+            disabled={loading}
+          >
+            {loading
+              ? "Logging in..."
+              : "Login"}
+          </button>
+        </form>
+
+        <p className="register-text">
+          Don't have an account?{" "}
+          <Link to="/register">
+            Create Account
+          </Link>
+        </p>
+
+        <Link
+          to="/"
+          className="home-link"
+        >
+          ← Back to Home
+        </Link>
+      </div>
+
       <style>{`
-        *{
-          box-sizing:border-box;
+        * {
+          box-sizing: border-box;
         }
 
-        .login-page{
-          min-height:100vh;
-          display:flex;
-          justify-content:center;
-          align-items:center;
-          background:#f4f4f4;
-          padding:20px;
+        .login-page {
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #e8f5e9,
+              #fff3e0
+            );
         }
 
-        .login-card{
-          width:100%;
-          max-width:420px;
-          background:#fff;
-          padding:35px;
-          border-radius:10px;
-          box-shadow:0 10px 25px rgba(0,0,0,.08);
+        .login-card {
+          width: 100%;
+          max-width: 430px;
+          background: white;
+          padding: 40px;
+          border-radius: 20px;
+
+          box-shadow:
+            0 15px 45px
+            rgba(0, 0, 0, 0.15);
+
+          text-align: center;
         }
 
-        .login-title{
-          text-align:center;
-          margin-bottom:30px;
-          color:#333;
+        .logo {
+          width: 70px;
+          height: 70px;
+          margin: 0 auto 15px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          border-radius: 50%;
+          background: #e8f5e9;
+
+          font-size: 35px;
         }
 
-        .input-group{
-          margin-bottom:20px;
+        .login-card h1 {
+          margin: 0;
+          color: #2e7d32;
+          font-size: 32px;
         }
 
-        .input-group label{
-          display:block;
-          margin-bottom:8px;
-          font-weight:600;
+        .subtitle {
+          margin: 10px 0 30px;
+          color: #777;
+          font-size: 15px;
         }
 
-        .input-group input{
-          width:100%;
-          padding:12px;
-          border:1px solid #ccc;
-          border-radius:6px;
-          font-size:15px;
+        form {
+          text-align: left;
         }
 
-        .login-submit{
-          width:100%;
-          padding:14px;
-          border:none;
-          background:#ff5a1f;
-          color:white;
-          font-size:16px;
-          font-weight:bold;
-          border-radius:6px;
-          cursor:pointer;
-          transition:.3s;
+        .form-group {
+          margin-bottom: 20px;
         }
 
-        .login-submit:hover{
-          background:#e14b13;
+        .form-group label {
+          display: block;
+          margin-bottom: 7px;
+          color: #333;
+          font-weight: 600;
         }
 
-        .login-submit:disabled{
-          background:#999;
-          cursor:not-allowed;
+        .form-group input {
+          width: 100%;
+          padding: 13px 15px;
+
+          border: 1px solid #ddd;
+          border-radius: 9px;
+
+          outline: none;
+          font-size: 15px;
+
+          transition: 0.3s;
         }
 
-        .signup-text{
-          margin-top:20px;
-          text-align:center;
+        .form-group input:focus {
+          border-color: #2e7d32;
+
+          box-shadow:
+            0 0 0 3px
+            rgba(46, 125, 50, 0.12);
         }
 
-        .signup-link{
-          color:#ff5a1f;
-          text-decoration:none;
-          font-weight:bold;
+        .login-btn {
+          width: 100%;
+          padding: 14px;
+
+          border: none;
+          border-radius: 9px;
+
+          background: #2e7d32;
+          color: white;
+
+          font-size: 17px;
+          font-weight: bold;
+
+          cursor: pointer;
+          transition: 0.3s;
         }
 
-        .signup-link:hover{
-          text-decoration:underline;
+        .login-btn:hover:not(:disabled) {
+          background: #1b5e20;
+          transform: translateY(-2px);
+        }
+
+        .login-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .register-text {
+          margin-top: 25px;
+          color: #666;
+        }
+
+        .register-text a {
+          color: #2e7d32;
+          font-weight: bold;
+          text-decoration: none;
+        }
+
+        .register-text a:hover {
+          text-decoration: underline;
+        }
+
+        .home-link {
+          display: inline-block;
+          margin-top: 15px;
+
+          color: #777;
+          text-decoration: none;
+          font-size: 14px;
+        }
+
+        .home-link:hover {
+          color: #2e7d32;
+        }
+
+        @media (max-width: 480px) {
+          .login-card {
+            padding: 30px 20px;
+          }
+
+          .login-card h1 {
+            font-size: 27px;
+          }
         }
       `}</style>
-
-      <main className="login-page">
-        <div className="login-card">
-
-          <h2 className="login-title">
-            Login
-          </h2>
-
-          <form onSubmit={handleSubmit}>
-
-            <div className="input-group">
-              <label>Email</label>
-
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Password</label>
-
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="login-submit"
-              disabled={loading}
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-
-          </form>
-
-          <p className="signup-text">
-            Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="signup-link"
-            >
-              Register
-            </Link>
-          </p>
-
-        </div>
-      </main>
-    </>
+    </div>
   );
 }
 
 export default Login;
+

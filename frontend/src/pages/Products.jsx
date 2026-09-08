@@ -1,442 +1,551 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-function MyProducts() {
+function Products() {
+  const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [editProduct, setEditProduct] = useState(null);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
 
+  // =========================
+  // GET PRODUCTS
+  // =========================
 
-  // Fetch seller products
-  const fetchMyProducts = async () => {
+  useEffect(() => {
+    let isMounted = true;
 
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+
+        const response = await axios.get(
+          "http://localhost:9003/user/products"
+        );
+
+        console.log("Products response:", response.data);
+
+        if (isMounted) {
+          setProducts(
+            response.data.products || []
+          );
+        }
+      } catch (error) {
+        console.error(
+          "GET PRODUCTS ERROR:",
+          error.response?.data || error
+        );
+
+        if (isMounted) {
+          alert(
+            error.response?.data?.message ||
+              "Unable to load products."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // =========================
+  // ADD TO CART
+  // =========================
+
+  async function addToCart(productId) {
     try {
+      const token =
+        localStorage.getItem("token");
 
-      const response = await axios.get(
-        "http://localhost:9003/user/my-products",
+      // User must login first
+      if (!token) {
+        alert(
+          "Please login before adding products to cart."
+        );
+
+        navigate("/login");
+        return;
+      }
+
+      console.log(
+        "Adding product to cart:",
+        productId
+      );
+
+      const response = await axios.post(
+        "http://localhost:9003/user/cart",
         {
+          productId: productId,
+          quantity: 1,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           withCredentials: true,
         }
       );
 
-
-      setProducts(
-        response.data.products || []
+      console.log(
+        "Add to cart response:",
+        response.data
       );
 
-
-    } catch(error) {
-
-      console.log(
-        "Fetch error:",
+      if (response.data.success) {
+        alert(
+          response.data.message ||
+            "Product added to cart."
+        );
+      } else {
+        alert(
+          response.data.message ||
+            "Unable to add product to cart."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "ADD TO CART ERROR:",
         error.response?.data || error
       );
 
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
 
-    } finally {
+        alert(
+          "Your login session has expired. Please login again."
+        );
 
-      setLoading(false);
-
-    }
-
-  };
-
-
-  useEffect(() => {
-
-    fetchMyProducts();
-
-  }, []);
-
-
-
-  // Delete product
-  const handleDelete = async (id) => {
-
-    const confirm = window.confirm(
-      "Delete this product?"
-    );
-
-
-    if(!confirm) return;
-
-
-    try {
-
-      const response = await axios.delete(
-        `http://localhost:9003/user/products/${id}`,
-        {
-          withCredentials:true,
-        }
-      );
-
-
-      alert(response.data.message);
-
-      fetchMyProducts();
-
-
-    } catch(error) {
-
-      console.log(error);
+        navigate("/login");
+        return;
+      }
 
       alert(
         error.response?.data?.message ||
-        "Delete failed"
+          "Unable to add product to cart."
       );
-
     }
-
-  };
-
-
-
-
-  // Update product
-  const handleUpdate = async(e)=>{
-
-    e.preventDefault();
-
-
-    try{
-
-      const response = await axios.put(
-        `http://localhost:9003/user/products/${editProduct._id}`,
-        editProduct,
-        {
-          withCredentials:true,
-        }
-      );
-
-
-      alert(response.data.message);
-
-
-      setEditProduct(null);
-
-      fetchMyProducts();
-
-
-    }catch(error){
-
-      console.log(error);
-
-      alert(
-        error.response?.data?.message ||
-        "Update failed"
-      );
-
-    }
-
-  };
-
-
-
-  if(loading){
-
-    return (
-      <h2 style={{textAlign:"center"}}>
-        Loading products...
-      </h2>
-    );
-
   }
 
+  // =========================
+  // BUY NOW
+  // =========================
 
+  function buyNow(product) {
+    const token =
+      localStorage.getItem("token");
+
+    if (!token) {
+      alert(
+        "Please login before buying a product."
+      );
+
+      navigate("/login");
+      return;
+    }
+
+    // Save selected product
+    localStorage.setItem(
+      "buyNowProduct",
+      JSON.stringify({
+        productId: product._id,
+        productName: product.productName,
+        price: product.price,
+        quantity: 1,
+        image: product.image,
+      })
+    );
+
+    navigate("/checkout");
+  }
+
+  // =========================
+  // CATEGORIES
+  // =========================
+
+  const categories = useMemo(() => {
+    return [
+      "All",
+      ...new Set(
+        products.map(
+          (product) =>
+            product.category ||
+            "Uncategorized"
+        )
+      ),
+    ];
+  }, [products]);
+
+  // =========================
+  // FILTER PRODUCTS
+  // =========================
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const name =
+        product.productName || "";
+
+      const searchMatch =
+        name
+          .toLowerCase()
+          .includes(
+            search.toLowerCase()
+          );
+
+      const categoryMatch =
+        category === "All" ||
+        (product.category ||
+          "Uncategorized") === category;
+
+      return (
+        searchMatch &&
+        categoryMatch
+      );
+    });
+  }, [
+    products,
+    search,
+    category,
+  ]);
+
+  // =========================
+  // LOADING
+  // =========================
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: "80px",
+        }}
+      >
+        <h2>
+          Loading Products...
+        </h2>
+      </div>
+    );
+  }
+
+  // =========================
+  // PAGE
+  // =========================
 
   return (
-
-    <div className="container">
+    <div className="products-container">
 
       <h1>
-        My Products
+        Fresh Grocery Products
       </h1>
 
+      <div className="top-bar">
 
-      {
-        products.length === 0 ?
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+        />
 
-        (
-          <h3>
-            No products added yet
-          </h3>
-        )
-
-        :
-
-        (
-
-        <div className="grid">
-
-        {
-          products.map(product=>(
-
-            <div
-              className="card"
-              key={product._id}
+        <select
+          value={category}
+          onChange={(e) =>
+            setCategory(e.target.value)
+          }
+        >
+          {categories.map((cat) => (
+            <option
+              key={cat}
+              value={cat}
             >
+              {cat}
+            </option>
+          ))}
+        </select>
 
+      </div>
 
-            {
-              product.image &&
+      {filteredProducts.length === 0 ? (
 
-              <img
-                src={
-                  `http://localhost:9003${product.image}`
-                }
-                alt={product.productName}
-              />
+        <div className="empty">
+          <h2>
+            No products found.
+          </h2>
+        </div>
 
-            }
+      ) : (
 
+        <div className="products-grid">
 
+          {filteredProducts.map(
+            (product) => (
 
-            <h2>
-              {product.productName}
-            </h2>
-
-
-            <p>
-              Category: {product.category}
-            </p>
-
-
-            <p>
-              {product.description}
-            </p>
-
-
-            <h3>
-              ₹{product.price}
-            </h3>
-
-
-            <p>
-              Stock: {product.stock}
-            </p>
-
-
-
-            <div className="buttons">
-
-              <button
-                onClick={()=>
-                  setEditProduct(product)
-                }
+              <div
+                className="product-card"
+                key={product._id}
               >
-                Edit
-              </button>
 
+                <img
+                  src={
+                    product.image
+                      ? `http://localhost:9003${product.image}`
+                      : "https://via.placeholder.com/300x220?text=No+Image"
+                  }
+                  alt={
+                    product.productName ||
+                    "Product image"
+                  }
+                  onError={(e) => {
+                    e.target.onerror = null;
 
+                    e.target.src =
+                      "https://via.placeholder.com/300x220?text=No+Image";
+                  }}
+                />
 
-              <button
-                className="delete"
-                onClick={()=>
-                  handleDelete(product._id)
-                }
-              >
-                Delete
-              </button>
+                <div className="product-body">
 
+                  <h2>
+                    {product.productName ||
+                      "Unnamed Product"}
+                  </h2>
 
-            </div>
+                  <p className="category">
+                    {product.category ||
+                      "Uncategorized"}
+                  </p>
 
+                  <p className="description">
+                    {product.description ||
+                      "No description available."}
+                  </p>
 
-            </div>
+                  <h3>
+                    ₹{product.price ?? "N/A"}
+                  </h3>
 
-          ))
+                  <p>
+                    Stock:{" "}
+                    <strong>
+                      {product.stock ?? 0}
+                    </strong>
+                  </p>
+
+                  <div className="buttons">
+
+                    <button
+                      className="cart-btn"
+                      onClick={() =>
+                        addToCart(
+                          product._id
+                        )
+                      }
+                      disabled={
+                        !product.stock
+                      }
+                    >
+                      Add To Cart
+                    </button>
+
+                    <button
+                      className="buy-btn"
+                      onClick={() =>
+                        buyNow(product)
+                      }
+                      disabled={
+                        !product.stock
+                      }
+                    >
+                      Buy Now
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            )
+          )}
+
+        </div>
+
+      )}
+
+      <style>{`
+
+        * {
+          box-sizing: border-box;
         }
 
-        </div>
+        .products-container {
+          max-width: 1300px;
+          margin: 40px auto;
+          padding: 20px;
+        }
 
-        )
-      }
+        .products-container h1 {
+          text-align: center;
+          margin-bottom: 30px;
+          color: #222;
+        }
 
+        .top-bar {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+        }
 
+        .top-bar input {
+          flex: 1;
+          min-width: 250px;
+          padding: 14px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          font-size: 16px;
+        }
 
+        .top-bar select {
+          width: 220px;
+          padding: 14px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          font-size: 16px;
+        }
 
-      {
-        editProduct &&
+        .products-grid {
+          display: grid;
+          grid-template-columns:
+            repeat(
+              auto-fit,
+              minmax(280px, 1fr)
+            );
+          gap: 25px;
+        }
 
-        <div className="edit-box">
+        .product-card {
+          background: #fff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow:
+            0 8px 20px
+            rgba(0, 0, 0, 0.08);
+          transition: 0.3s;
+        }
 
-          <h2>
-            Edit Product
-          </h2>
+        .product-card:hover {
+          transform: translateY(-6px);
+        }
 
+        .product-card img {
+          width: 100%;
+          height: 230px;
+          object-fit: cover;
+        }
 
-          <form onSubmit={handleUpdate}>
+        .product-body {
+          padding: 18px;
+        }
 
+        .product-body h2 {
+          margin: 0 0 10px;
+          font-size: 22px;
+        }
 
-            <input
-              value={editProduct.productName}
-              onChange={(e)=>
-                setEditProduct({
-                  ...editProduct,
-                  productName:e.target.value
-                })
-              }
-            />
+        .category {
+          color: #ff5a1f;
+          font-weight: bold;
+        }
 
+        .description {
+          color: #666;
+          margin: 12px 0;
+          min-height: 55px;
+        }
 
-            <input
-              value={editProduct.category}
-              onChange={(e)=>
-                setEditProduct({
-                  ...editProduct,
-                  category:e.target.value
-                })
-              }
-            />
+        .product-body h3 {
+          color: #0b8f36;
+          margin-bottom: 10px;
+        }
 
+        .buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 20px;
+        }
 
-            <textarea
-              value={editProduct.description}
-              onChange={(e)=>
-                setEditProduct({
-                  ...editProduct,
-                  description:e.target.value
-                })
-              }
-            />
+        .buttons button {
+          flex: 1;
+          border: none;
+          cursor: pointer;
+          padding: 12px;
+          border-radius: 8px;
+          color: #fff;
+          font-size: 15px;
+          font-weight: 600;
+        }
 
+        .buttons button:disabled {
+          background: #ccc;
+          cursor: not-allowed;
+        }
 
-            <input
-              type="number"
-              value={editProduct.price}
-              onChange={(e)=>
-                setEditProduct({
-                  ...editProduct,
-                  price:e.target.value
-                })
-              }
-            />
+        .cart-btn {
+          background: #ff5a1f;
+        }
 
+        .buy-btn {
+          background: #0b8f36;
+        }
 
-            <input
-              type="number"
-              value={editProduct.stock}
-              onChange={(e)=>
-                setEditProduct({
-                  ...editProduct,
-                  stock:e.target.value
-                })
-              }
-            />
+        .cart-btn:hover {
+          background: #e64a19;
+        }
 
+        .buy-btn:hover {
+          background: #08752d;
+        }
 
-            <button>
-              Update
-            </button>
+        .empty {
+          text-align: center;
+          margin-top: 80px;
+          color: #666;
+        }
 
+        @media (max-width: 768px) {
 
-            <button
-              type="button"
-              onClick={()=>
-                setEditProduct(null)
-              }
-            >
-              Cancel
-            </button>
+          .top-bar {
+            flex-direction: column;
+          }
 
+          .top-bar select {
+            width: 100%;
+          }
 
-          </form>
+          .buttons {
+            flex-direction: column;
+          }
 
-        </div>
+        }
 
-      }
-
-
-
-<style>{`
-
-.container{
- max-width:1200px;
- margin:40px auto;
- padding:20px;
-}
-
-
-h1{
- text-align:center;
-}
-
-
-.grid{
- display:grid;
- grid-template-columns:
- repeat(auto-fit,minmax(260px,1fr));
- gap:25px;
-}
-
-
-.card{
- background:white;
- padding:20px;
- border-radius:12px;
- box-shadow:0 5px 20px rgba(0,0,0,.1);
-}
-
-
-.card img{
- width:100%;
- height:220px;
- object-fit:cover;
- border-radius:10px;
-}
-
-
-.buttons{
- display:flex;
- gap:10px;
-}
-
-
-button{
- flex:1;
- padding:10px;
- border:none;
- cursor:pointer;
- background:#ff5a1f;
- color:white;
- border-radius:5px;
-}
-
-
-.delete{
- background:red;
-}
-
-
-.edit-box{
- margin-top:40px;
- background:#eee;
- padding:20px;
- border-radius:10px;
-}
-
-
-.edit-box form{
- display:flex;
- flex-direction:column;
- gap:15px;
-}
-
-
-input,textarea{
- padding:12px;
-}
-
-`}</style>
-
+      `}</style>
 
     </div>
-
   );
-
 }
 
-
-export default MyProducts;
+export default Products;

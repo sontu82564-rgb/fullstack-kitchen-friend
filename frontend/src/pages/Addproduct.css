@@ -1,0 +1,281 @@
+* {
+  box-sizing: border-box;
+}
+
+.add-product-page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: #f5f7f9;
+}
+
+.product-card {
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 35px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Product Header */
+
+.product-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.product-header h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #222222;
+}
+
+.product-header p {
+  margin: 0;
+  font-size: 15px;
+  color: #777777;
+}
+
+/* Form */
+
+.product-form {
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 22px;
+}
+
+.form-group label {
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d8dce1;
+  border-radius: 8px;
+  outline: none;
+  background: #ffffff;
+  color: #222222;
+  font-size: 15px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.12);
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #a0a0a0;
+}
+
+/* Price & Stock */
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Image Upload */
+
+.image-upload-group input[type="file"] {
+  padding: 10px;
+  cursor: pointer;
+  background: #fafafa;
+}
+
+.image-upload-group small {
+  margin-top: 7px;
+  color: #777777;
+  font-size: 13px;
+}
+
+/* Image Preview */
+
+.image-preview-container {
+  margin-bottom: 25px;
+  padding: 18px;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.image-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.image-preview-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #333333;
+}
+
+.image-preview {
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #eeeeee;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+/* Remove Image */
+
+.remove-image-button {
+  padding: 8px 13px;
+  border: none;
+  border-radius: 6px;
+  background: #dc3545;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.remove-image-button:hover {
+  background: #c82333;
+}
+
+/* Messages */
+
+.form-message {
+  margin-bottom: 20px;
+  padding: 13px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.error-message {
+  border: 1px solid #f5c2c7;
+  background: #f8d7da;
+  color: #842029;
+}
+
+.success-message {
+  border: 1px solid #badbcc;
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+/* Add Product Button */
+
+.add-product-button {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #4caf50;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.add-product-button:hover {
+  background: #43a047;
+}
+
+.add-product-button:active {
+  transform: scale(0.99);
+}
+
+.add-product-button:disabled {
+  background: #9e9e9e;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .add-product-page {
+    padding: 25px 15px;
+  }
+
+  .product-card {
+    padding: 25px 20px;
+  }
+
+  .product-header h1 {
+    font-size: 27px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .image-preview {
+    height: 230px;
+  }
+}
+
+@media (max-width: 480px) {
+  .add-product-page {
+    padding: 15px 10px;
+  }
+
+  .product-card {
+    padding: 20px 15px;
+    border-radius: 12px;
+  }
+
+  .product-header {
+    text-align: left;
+  }
+
+  .product-header h1 {
+    font-size: 24px;
+  }
+
+  .product-header p {
+    font-size: 14px;
+  }
+
+  .image-preview-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .remove-image-button {
+    width: 100%;
+  }
+
+  .image-preview {
+    height: 200px;
+  }
+}

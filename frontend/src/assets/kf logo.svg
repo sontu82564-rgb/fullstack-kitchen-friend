@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
+  <defs>
+    <!-- Path for curved "KITCHEN" text -->
+    <path id="textPathKitchen" d="M 150 400 A 250 250 0 0 1 650 400" />
+    <!-- Color Palette -->
+    <style>
+      .bg-cream { fill: #fdfaf4; }
+      .dark-teal { fill: #233f48; stroke: #233f48; }
+      .dark-teal-fill { fill: #233f48; }
+      .dark-teal-stroke { fill: none; stroke: #233f48; }
+      .orange-fill { fill: #fcad7c; }
+      .white-fill { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <!-- Outer Borders & Cream Background -->
+  <circle cx="400" cy="400" r="380" class="bg-cream" stroke="#233f48" stroke-width="12" />
+  <circle cx="400" cy="400" r="365" fill="none" stroke="#233f48" stroke-width="4" />
+
+  <!-- Inner Orange Arch (Background behind chef) -->
+  <path d="M 230 520 C 230 250, 570 250, 570 520 Z" class="orange-fill" />
+
+  <!-- TEXT: KITCHEN -->
+  <text font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="95" class="dark-teal-fill" letter-spacing="12">
+    <textPath href="#textPathKitchen" startOffset="50%" text-anchor="middle">KITCHEN</textPath>
+  </text>
+
+  <!-- === CENTRAL CHEF HAT CHARACTER === -->
+  <!-- Left Arm (Waving) -->
+  <path d="M 330 450 Q 280 470 270 410" class="dark-teal-stroke" stroke-width="12" stroke-linecap="round"/>
+  <!-- Left Hand -->
+  <path d="M 270 410 C 250 410, 240 370, 260 370 C 270 370, 270 350, 280 350 C 290 350, 300 370, 290 390" fill="#ffffff" stroke="#233f48" stroke-width="8" stroke-linejoin="round"/>
+
+  <!-- Right Arm (Holding Whisk) -->
+  <path d="M 470 450 Q 520 480 500 420" class="dark-teal-stroke" stroke-width="12" stroke-linecap="round"/>
+  
+  <!-- Hat Base / Face -->
+  <path d="M 340 510 L 460 510 C 470 510, 480 430, 480 390 L 320 390 C 320 430, 330 510, 340 510 Z" class="white-fill" stroke="#233f48" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M 335 480 L 465 480" class="dark-teal-stroke" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Hat Puffs (Top part of chef hat) -->
+  <path d="M 290 390 C 250 330, 320 280, 360 300 C 370 240, 480 240, 480 300 C 530 280, 560 340, 510 390 Z" class="white-fill" stroke="#233f48" stroke-width="12" stroke-linejoin="round"/>
+  
+  <!-- Smiling Face Details -->
+  <!-- Left Eye -->
+  <path d="M 370 415 Q 380 400 390 415" class="dark-teal-stroke" stroke-width="8" stroke-linecap="round"/>
+  <!-- Right Eye -->
+  <path d="M 410 415 Q 420 400 430 415" class="dark-teal-stroke" stroke-width="8" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <ellipse cx="365" cy="430" rx="10" ry="6" class="orange-fill" opacity="0.8"/>
+  <ellipse cx="435" cy="430" rx="10" ry="6" class="orange-fill" opacity="0.8"/>
+  <!-- Mouth -->
+  <path d="M 380 435 C 380 460, 420 460, 420 435 Z" class="dark-teal-fill"/>
+  <path d="M 390 442 C 390 455, 410 455, 410 442 Z" class="orange-fill"/>
+
+  <!-- === LEFT ELEMENT: POT & STEAM === -->
+  <!-- Steam lines -->
+  <path d="M 240 400 Q 230 380 240 360" class="dark-teal-stroke" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 260 390 Q 250 370 260 350" class="dark-teal-stroke" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 280 400 Q 270 380 280 360" class="dark-teal-stroke" stroke-width="6" stroke-linecap="round"/>
+  <!-- Pot Body -->
+  <path d="M 200 440 L 280 440 L 280 490 C 280 505, 200 505, 200 490 Z" class="orange-fill" stroke="#233f48" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Pot Lid -->
+  <path d="M 195 440 Q 240 420 285 440 Z" class="white-fill" stroke="#233f48" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="240" cy="425" r="8" class="dark-teal-fill" />
+  <!-- Pot Handles -->
+  <path d="M 195 460 Q 180 460 180 475 Q 180 490 195 480" class="dark-teal-stroke" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 285 460 Q 300 460 300 475 Q 300 490 285 480" class="dark-teal-stroke" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- === RIGHT ELEMENT: UTENSILS === -->
+  <!-- Whisk (Held by character) -->
+  <path d="M 500 440 L 530 330" class="dark-teal-stroke" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="535" cy="310" rx="15" ry="25" class="dark-teal-stroke" stroke-width="8" transform="rotate(15 535 310)"/>
+  <ellipse cx="535" cy="310" rx="6" ry="25" class="dark-teal-stroke" stroke-width="8" transform="rotate(15 535 310)"/>
+  
+  <!-- Crossed Spatula & Spoon -->
+  <!-- Spatula -->
+  <path d="M 560 410 L 610 500" class="dark-teal-stroke" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 545 425 L 575 405 C 585 390, 565 370, 550 380 L 530 405 Z" class="white-fill" stroke="#233f48" stroke-width="8" stroke-linejoin="round"/>
+  <line x1="545" y1="395" x2="560" y2="415" class="dark-teal-stroke" stroke-width="5" stroke-linecap="round"/>
+  <line x1="555" y1="390" x2="570" y2="410" class="dark-teal-stroke" stroke-width="5" stroke-linecap="round"/>
+  
+  <!-- Spoon -->
+  <path d="M 610 410 L 560 500" class="dark-teal-stroke" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="615" cy="395" rx="15" ry="25" class="orange-fill" stroke="#233f48" stroke-width="8" transform="rotate(30 615 395)"/>
+
+  <!-- Right Hand (Overlaying the whisk) -->
+  <path d="M 515 410 C 530 410, 530 440, 510 450 C 490 460, 480 430, 495 410 Z" class="white-fill" stroke="#233f48" stroke-width="8" stroke-linejoin="round"/>
+
+  <!-- === TEXT: FRIEND & SUBTITLE === -->
+  <!-- Leaf Left -->
+  <path d="M 230 550 C 270 540, 270 580, 240 600 C 220 580, 210 560, 230 550 Z" class="orange-fill" stroke="#233f48" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M 230 550 C 240 570, 250 580, 260 595" class="dark-teal-stroke" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Text: FRIEND -->
+  <text x="400" y="590" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="80" class="dark-teal-fill" text-anchor="middle" letter-spacing="4">FRIEND</text>
+
+  <!-- Leaf Right -->
+  <path d="M 570 550 C 530 540, 530 580, 560 600 C 580 580, 590 560, 570 550 Z" class="orange-fill" stroke="#233f48" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M 570 550 C 560 570, 550 580, 540 595" class="dark-teal-stroke" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Subtitle: Your Cooking Companion -->
+  <text x="400" y="650" font-family="'Brush Script MT', 'Comic Sans MS', cursive, sans-serif" font-size="40" class="dark-teal-fill" text-anchor="middle">Your Cooking Companion</text>
+</svg>
