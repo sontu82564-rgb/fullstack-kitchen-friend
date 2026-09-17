@@ -26,41 +26,17 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
 
-      {/* =====================
-          PUBLIC
-      ===================== */}
+      <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/"
-        element={<Home />}
-      />
+      <Route path="/login" element={<Login />} />
 
-      <Route
-        path="/register"
-        element={<Register />}
-      />
+      <Route path="/verify/:token" element={<VerifyEmail />} />
 
-      <Route
-        path="/login"
-        element={<Login />}
-      />
+      <Route path="/verify-email/:token" element={<VerifyEmail />} />
 
-      <Route
-        path="/verify/:token"
-        element={<VerifyEmail />}
-      />
-
-      <Route
-        path="/verify-email/:token"
-        element={<VerifyEmail />}
-      />
-
-      <Route
-        path="/check-email"
-        element={<CheckEmail />}
-      />
-
+      <Route path="/check-email" element={<CheckEmail />} />
 
       {/* =====================
           BUYER ONLY
@@ -129,11 +105,6 @@ function App() {
         }
       />
 
-
-      {/* =====================
-          SELLER ONLY
-      ===================== */}
-
       <Route
         path="/seller/dashboard"
         element={
@@ -170,19 +141,9 @@ function App() {
         }
       />
 
-
-      {/* =====================
-          404
-      ===================== */}
-
-      <Route
-        path="*"
-        element={<NotFound />}
-      />
-
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
 
 export default App;
-

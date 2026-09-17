@@ -1,17 +1,21 @@
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import "./Checkout.css";
+
+const API_URL = "http://localhost:9003/user";
 
 function Checkout() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const product = location.state?.product;
-
+  const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     phone: "",
     address: "",
     city: "",
@@ -19,448 +23,235 @@ function Checkout() {
     pincode: "",
   });
 
-  // =========================
-  // Product Check
-  // =========================
+  useEffect(() => {
+    let isMounted = true;
 
-  if (!product) {
+    const loadCart = async () => {
+      try {
+        const response = await axios.get(
+          `${API_URL}/cart`,
+          {
+            withCredentials: true,
+          }
+        );
+
+        if (!isMounted) return;
+
+        const items =
+          response.data?.cart?.items || [];
+
+        setCart(
+          Array.isArray(items) ? items : []
+        );
+      } catch (err) {
+        console.error("CHECKOUT CART ERROR:", err);
+
+        if (!isMounted) return;
+
+        if (err.response?.status === 401) {
+          navigate("/login");
+          return;
+        }
+
+        setError(
+          err.response?.data?.message ||
+            "Unable to load cart."
+        );
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
+
+  const getProduct = (item) => {
+    return item?.product || item?.productId || item;
+  };
+
+  const getProductName = (item) => {
+    const product = getProduct(item);
+
     return (
-      <div style={styles.message}>
-        <h2>Product information not found.</h2>
-
-        <button
-          style={styles.button}
-          onClick={() => navigate("/products")}
-        >
-          Back to Products
-        </button>
-      </div>
+      product?.productName ||
+      product?.name ||
+      "Product"
     );
-  }
+  };
 
-  // =========================
-  // Handle Input
-  // =========================
+  const getProductPrice = (item) => {
+    const product = getProduct(item);
 
-  function handleChange(e) {
+    return Number(product?.price || 0);
+  };
+
+  const getQuantity = (item) => {
+    return Number(item?.quantity || 1);
+  };
+
+  const subtotal = cart.reduce(
+    (total, item) =>
+      total +
+      getProductPrice(item) *
+        getQuantity(item),
+    0
+  );
+
+  const deliveryCharge = subtotal > 0 ? 40 : 0;
+  const total = subtotal + deliveryCharge;
+
+  const handleChange = (e) => {
     const { name, value } = e.target;
 
     setFormData((previous) => ({
       ...previous,
       [name]: value,
     }));
-  }
+  };
 
-  // =========================
-  // Place Order
-  // =========================
-
-  async function handleSubmit(e) {
+  const placeOrder = async (e) => {
     e.preventDefault();
 
-    const token = localStorage.getItem("token");
-
-    // User must login
-    if (!token) {
-      alert("Please login before placing an order.");
-      navigate("/login");
+    if (cart.length === 0) {
+      setError("Your cart is empty.");
       return;
     }
 
     try {
       setPlacingOrder(true);
+      setError("");
 
       const response = await axios.post(
-        "http://localhost:9003/user/orders",
+        `${API_URL}/orders`,
         {
-          items: [
-            {
-              product: product._id,
-              quantity: 1,
-            },
-          ],
-
-          shippingAddress: {
-            name: formData.name,
-            phone: formData.phone,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            pincode: formData.pincode,
-          },
-
+          ...formData,
           paymentMethod: "COD",
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-
           withCredentials: true,
         }
       );
 
-      console.log("ORDER RESPONSE:", response.data);
+      if (response.data?.success) {
+        alert("Order placed successfully!");
 
-      alert(
-        response.data.message ||
-          "Order placed successfully!"
-      );
-
-      navigate("/orders");
-
-    } catch (error) {
-      console.error(
-        "ORDER ERROR:",
-        error.response?.data || error
-      );
-
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        alert("Please login again.");
-        navigate("/login");
-
-        return;
+        navigate("/orders");
       }
+    } catch (err) {
+      console.error("PLACE ORDER ERROR:", err);
 
-      alert(
-        error.response?.data?.message ||
+      setError(
+        err.response?.data?.message ||
           "Unable to place order."
       );
-
     } finally {
       setPlacingOrder(false);
     }
+  };
+
+  if (loading) {
+    return (
+      <main className="checkout-page">
+        <div className="checkout-loading">
+          <div className="checkout-spinner"></div>
+          <p>Loading checkout...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (cart.length === 0) {
+    return (
+      <main className="checkout-page">
+        <div className="checkout-empty">
+          <h1>Your cart is empty</h1>
+
+          <p>
+            Add products before proceeding to
+            checkout.
+          </p>
+
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/products")
+            }
+          >
+            Continue Shopping
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <>
-      <style>{`
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .checkout-page {
-          min-height: 100vh;
-          background: #f5f5f5;
-          padding: 40px 20px;
-        }
-
-        .checkout-container {
-          max-width: 1100px;
-          margin: auto;
-
-          display: grid;
-          grid-template-columns: 1fr 400px;
-
-          gap: 30px;
-        }
-
-        .checkout-card {
-          background: white;
-
-          padding: 30px;
-
-          border-radius: 12px;
-
-          box-shadow:
-            0 6px 20px rgba(0,0,0,.08);
-        }
-
-        .checkout-title {
-          margin-bottom: 25px;
-        }
-
-        .form-group {
-          margin-bottom: 18px;
-        }
-
-        .form-group label {
-          display: block;
-
-          margin-bottom: 7px;
-
-          font-weight: 600;
-        }
-
-        .form-group input,
-        .form-group textarea {
-
-          width: 100%;
-
-          padding: 12px;
-
-          border: 1px solid #ddd;
-
-          border-radius: 7px;
-
-          font-size: 15px;
-
-          outline: none;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-
-          border-color: #ff5a1f;
-        }
-
-        .form-group textarea {
-
-          min-height: 100px;
-
-          resize: vertical;
-        }
-
-        .two-columns {
-
-          display: grid;
-
-          grid-template-columns:
-            1fr 1fr;
-
-          gap: 15px;
-        }
-
-        .payment-box {
-
-          margin-top: 10px;
-
-          padding: 15px;
-
-          border: 2px solid #0b8f36;
-
-          background: #f1fff5;
-
-          border-radius: 8px;
-        }
-
-        .payment-box strong {
-
-          display: block;
-
-          margin-bottom: 5px;
-        }
-
-        .place-order-btn {
-
-          width: 100%;
-
-          padding: 15px;
-
-          margin-top: 20px;
-
-          border: none;
-
-          border-radius: 8px;
-
-          background: #ff5a1f;
-
-          color: white;
-
-          font-size: 16px;
-
-          font-weight: bold;
-
-          cursor: pointer;
-        }
-
-        .place-order-btn:hover {
-
-          background: #e64a19;
-        }
-
-        .place-order-btn:disabled {
-
-          background: #aaa;
-
-          cursor: not-allowed;
-        }
-
-        .product-image {
-
-          width: 100%;
-
-          height: 250px;
-
-          object-fit: cover;
-
-          border-radius: 8px;
-
-          margin-bottom: 20px;
-        }
-
-        .product-name {
-
-          font-size: 24px;
-
-          margin-bottom: 10px;
-        }
-
-        .category {
-
-          color: #ff5a1f;
-
-          font-weight: bold;
-
-          margin-bottom: 15px;
-        }
-
-        .price-row {
-
-          display: flex;
-
-          justify-content:
-            space-between;
-
-          padding: 15px 0;
-
-          border-bottom:
-            1px solid #eee;
-        }
-
-        .total-row {
-
-          display: flex;
-
-          justify-content:
-            space-between;
-
-          margin-top: 20px;
-
-          font-size: 22px;
-
-          font-weight: bold;
-
-          color: #0b8f36;
-        }
-
-        .message {
-
-          text-align: center;
-
-          padding: 100px 20px;
-        }
-
-        .message button {
-
-          margin-top: 20px;
-
-          padding: 12px 25px;
-
-          background: #ff5a1f;
-
-          color: white;
-
-          border: none;
-
-          border-radius: 7px;
-
-          cursor: pointer;
-        }
-
-        @media(max-width:800px) {
-
-          .checkout-container {
-
-            grid-template-columns: 1fr;
-          }
-
-        }
-
-        @media(max-width:500px) {
-
-          .two-columns {
-
-            grid-template-columns: 1fr;
-          }
-
-          .checkout-card {
-
-            padding: 20px;
-          }
-        }
-
-      `}</style>
-
-      <main className="checkout-page">
-
-        <div className="checkout-container">
-
-          {/* =========================
-              SHIPPING INFORMATION
-          ========================= */}
-
-          <div className="checkout-card">
-
-            <h1 className="checkout-title">
-              Checkout
-            </h1>
-
-            <form onSubmit={handleSubmit}>
-
+    <main className="checkout-page">
+      <div className="checkout-container">
+        <div className="checkout-header">
+          <h1>Checkout</h1>
+          <p>Complete your order</p>
+        </div>
+
+        {error && (
+          <div className="checkout-error">
+            {error}
+          </div>
+        )}
+
+        <div className="checkout-layout">
+          <section className="checkout-form-section">
+            <h2>Delivery Details</h2>
+
+            <form onSubmit={placeOrder}>
               <div className="form-group">
-
-                <label>
-                  Full Name
-                </label>
+                <label>Full Name</label>
 
                 <input
                   type="text"
-                  name="name"
-                  value={formData.name}
+                  name="fullName"
+                  value={formData.fullName}
                   onChange={handleChange}
                   placeholder="Enter your full name"
                   required
                 />
-
               </div>
 
               <div className="form-group">
-
-                <label>
-                  Phone Number
-                </label>
+                <label>Phone Number</label>
 
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="10 digit phone number"
+                  placeholder="Enter your phone number"
                   pattern="[0-9]{10}"
                   maxLength="10"
                   required
                 />
-
               </div>
 
               <div className="form-group">
-
-                <label>
-                  Address
-                </label>
+                <label>Address</label>
 
                 <textarea
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
-                  placeholder="House number, street, area..."
+                  placeholder="House number, street, area"
                   required
                 />
-
               </div>
 
-              <div className="two-columns">
-
+              <div className="checkout-row">
                 <div className="form-group">
-
-                  <label>
-                    City
-                  </label>
+                  <label>City</label>
 
                   <input
                     type="text"
@@ -470,14 +261,10 @@ function Checkout() {
                     placeholder="City"
                     required
                   />
-
                 </div>
 
                 <div className="form-group">
-
-                  <label>
-                    State
-                  </label>
+                  <label>State</label>
 
                   <input
                     type="text"
@@ -487,163 +274,121 @@ function Checkout() {
                     placeholder="State"
                     required
                   />
-
                 </div>
-
               </div>
 
               <div className="form-group">
-
-                <label>
-                  Pincode
-                </label>
+                <label>PIN Code</label>
 
                 <input
                   type="text"
                   name="pincode"
                   value={formData.pincode}
                   onChange={handleChange}
-                  placeholder="6 digit pincode"
+                  placeholder="6 digit PIN code"
                   pattern="[0-9]{6}"
                   maxLength="6"
                   required
                 />
-
               </div>
 
-              <h3>
-                Payment Method
-              </h3>
+              <div className="payment-section">
+                <h3>Payment Method</h3>
 
-              <div className="payment-box">
+                <div className="payment-option">
+                  <input
+                    type="radio"
+                    checked
+                    readOnly
+                  />
 
-                <strong>
-                  💵 Cash on Delivery
-                </strong>
+                  <div>
+                    <strong>
+                      Cash on Delivery
+                    </strong>
 
-                <span>
-                  Pay when your order arrives.
-                </span>
-
+                    <p>
+                      Pay when your order is
+                      delivered.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="place-order-btn"
+                className="place-order-button"
                 disabled={placingOrder}
               >
                 {placingOrder
                   ? "Placing Order..."
-                  : `Place Order - ₹${product.price}`}
+                  : `Place Order • ₹${total.toFixed(
+                      2
+                    )}`}
               </button>
-
             </form>
+          </section>
 
-          </div>
+          <aside className="checkout-summary">
+            <h2>Order Summary</h2>
 
-          {/* =========================
-              ORDER SUMMARY
-          ========================= */}
+            <div className="checkout-items">
+              {cart.map((item, index) => (
+                <div
+                  className="checkout-item"
+                  key={
+                    getProduct(item)?._id ||
+                    index
+                  }
+                >
+                  <div>
+                    <h3>
+                      {getProductName(item)}
+                    </h3>
 
-          <div className="checkout-card">
+                    <p>
+                      Qty: {getQuantity(item)}
+                    </p>
+                  </div>
 
-            <h2>
-              Order Summary
-            </h2>
+                  <strong>
+                    ₹
+                    {(
+                      getProductPrice(item) *
+                      getQuantity(item)
+                    ).toFixed(2)}
+                  </strong>
+                </div>
+              ))}
+            </div>
 
-            <br />
-
-            <img
-              className="product-image"
-              src={
-                product.image
-                  ? `http://localhost:9003${product.image}`
-                  : "https://via.placeholder.com/400x250?text=No+Image"
-              }
-              alt={product.productName}
-            />
-
-            <h2 className="product-name">
-              {product.productName}
-            </h2>
-
-            <p className="category">
-              {product.category ||
-                "Grocery"}
-            </p>
-
-            <div className="price-row">
-
+            <div className="checkout-summary-row">
+              <span>Subtotal</span>
               <span>
-                Product Price
+                ₹{subtotal.toFixed(2)}
               </span>
+            </div>
+
+            <div className="checkout-summary-row">
+              <span>Delivery</span>
+              <span>
+                ₹{deliveryCharge.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="checkout-total">
+              <span>Total</span>
 
               <strong>
-                ₹{product.price}
+                ₹{total.toFixed(2)}
               </strong>
-
             </div>
-
-            <div className="price-row">
-
-              <span>
-                Quantity
-              </span>
-
-              <strong>
-                1
-              </strong>
-
-            </div>
-
-            <div className="price-row">
-
-              <span>
-                Delivery
-              </span>
-
-              <strong>
-                FREE
-              </strong>
-
-            </div>
-
-            <div className="total-row">
-
-              <span>
-                Total
-              </span>
-
-              <span>
-                ₹{product.price}
-              </span>
-
-            </div>
-
-          </div>
-
+          </aside>
         </div>
-
-      </main>
-    </>
+      </div>
+    </main>
   );
 }
 
-const styles = {
-  message: {
-    textAlign: "center",
-    padding: "100px 20px",
-  },
-
-  button: {
-    marginTop: "20px",
-    padding: "12px 25px",
-    border: "none",
-    background: "#ff5a1f",
-    color: "white",
-    borderRadius: "7px",
-    cursor: "pointer",
-  },
-};
-
 export default Checkout;
+

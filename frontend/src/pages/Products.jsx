@@ -1,133 +1,173 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import "./Products.css";
+
+const API_URL = "http://localhost:9003/user";
 
 function Products() {
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [cartCount, setCartCount] = useState(0);
+  const [addingProduct, setAddingProduct] = useState("");
 
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
+  const storedUser = localStorage.getItem("user");
 
-  // =========================
-  // GET PRODUCTS
-  // =========================
+  let user = null;
+
+  try {
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    console.error("Invalid user data:", error);
+  }
+
+  /*
+  ========================================
+  GET PRODUCTS
+  ========================================
+  */
 
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchProducts() {
+    const loadProducts = async () => {
       try {
-        setLoading(true);
-
         const response = await axios.get(
-          "http://localhost:9003/user/products"
+          `${API_URL}/products`
         );
 
-        console.log("Products response:", response.data);
+        if (!isMounted) return;
 
-        if (isMounted) {
-          setProducts(
-            response.data.products || []
-          );
-        }
+        setProducts(response.data?.products || []);
+        setError("");
       } catch (error) {
         console.error(
           "GET PRODUCTS ERROR:",
-          error.response?.data || error
+          error
         );
 
-        if (isMounted) {
-          alert(
-            error.response?.data?.message ||
-              "Unable to load products."
-          );
-        }
+        if (!isMounted) return;
+
+        setError(
+          error.response?.data?.message ||
+            "Unable to load products."
+        );
       } finally {
         if (isMounted) {
           setLoading(false);
         }
       }
-    }
+    };
 
-    fetchProducts();
+    loadProducts();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // =========================
-  // ADD TO CART
-  // =========================
+  /*
+  ========================================
+  GET CART COUNT
+  ========================================
+  */
 
-  async function addToCart(productId) {
-    try {
-      const token =
-        localStorage.getItem("token");
+  useEffect(() => {
+    let isMounted = true;
 
-      // User must login first
-      if (!token) {
-        alert(
-          "Please login before adding products to cart."
+    const loadCartCount = async () => {
+      try {
+        const response = await axios.get(
+          `${API_URL}/cart`,
+          {
+            withCredentials: true,
+          }
         );
 
-        navigate("/login");
-        return;
-      }
+        if (!isMounted) return;
 
-      console.log(
-        "Adding product to cart:",
-        productId
-      );
+        const items =
+          response.data?.cart?.items || [];
+
+        if (Array.isArray(items)) {
+          const count = items.reduce(
+            (total, item) =>
+              total + Number(item.quantity || 0),
+            0
+          );
+
+          setCartCount(count);
+        }
+      } catch (error) {
+        console.error(
+          "GET CART COUNT ERROR:",
+          error
+        );
+      }
+    };
+
+    if (user?.role === "buyer") {
+      loadCartCount();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.role]);
+
+  /*
+  ========================================
+  ADD TO CART
+  ========================================
+  */
+
+  const addToCart = async (productId) => {
+    try {
+      setAddingProduct(productId);
 
       const response = await axios.post(
-        "http://localhost:9003/user/cart",
+        `${API_URL}/cart`,
         {
-          productId: productId,
+          productId,
           quantity: 1,
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
           withCredentials: true,
         }
       );
 
-      console.log(
-        "Add to cart response:",
-        response.data
-      );
+      if (response.data?.success) {
+        const items =
+          response.data?.cart?.items || [];
 
-      if (response.data.success) {
-        alert(
-          response.data.message ||
-            "Product added to cart."
+        const count = items.reduce(
+          (total, item) =>
+            total + Number(item.quantity || 0),
+          0
         );
-      } else {
-        alert(
-          response.data.message ||
-            "Unable to add product to cart."
-        );
+
+        setCartCount(count);
+
+        alert("Product added to cart!");
       }
     } catch (error) {
       console.error(
         "ADD TO CART ERROR:",
-        error.response?.data || error
+        error
       );
 
       if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        alert(
-          "Your login session has expired. Please login again."
-        );
-
+        alert("Please login first.");
         navigate("/login");
+        return;
+      }
+
+      if (error.response?.status === 403) {
+        alert("Only buyers can add products to cart.");
         return;
       }
 
@@ -135,416 +175,320 @@ function Products() {
         error.response?.data?.message ||
           "Unable to add product to cart."
       );
+    } finally {
+      setAddingProduct("");
     }
-  }
+  };
 
-  // =========================
-  // BUY NOW
-  // =========================
+  /*
+  ========================================
+  LOGOUT
+  ========================================
+  */
 
-  function buyNow(product) {
-    const token =
-      localStorage.getItem("token");
-
-    if (!token) {
-      alert(
-        "Please login before buying a product."
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        `${API_URL}/logout`,
+        {},
+        {
+          withCredentials: true,
+        }
       );
-
+    } catch (error) {
+      console.log(
+        "Logout API error:",
+        error.message
+      );
+    } finally {
+      localStorage.removeItem("user");
       navigate("/login");
-      return;
     }
+  };
 
-    // Save selected product
-    localStorage.setItem(
-      "buyNowProduct",
-      JSON.stringify({
-        productId: product._id,
-        productName: product.productName,
-        price: product.price,
-        quantity: 1,
-        image: product.image,
-      })
-    );
-
-    navigate("/checkout");
-  }
-
-  // =========================
-  // CATEGORIES
-  // =========================
-
-  const categories = useMemo(() => {
-    return [
-      "All",
-      ...new Set(
-        products.map(
-          (product) =>
-            product.category ||
-            "Uncategorized"
-        )
-      ),
-    ];
-  }, [products]);
-
-  // =========================
-  // FILTER PRODUCTS
-  // =========================
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const name =
-        product.productName || "";
-
-      const searchMatch =
-        name
-          .toLowerCase()
-          .includes(
-            search.toLowerCase()
-          );
-
-      const categoryMatch =
-        category === "All" ||
-        (product.category ||
-          "Uncategorized") === category;
-
-      return (
-        searchMatch &&
-        categoryMatch
-      );
-    });
-  }, [
-    products,
-    search,
-    category,
-  ]);
-
-  // =========================
-  // LOADING
-  // =========================
+  /*
+  ========================================
+  LOADING
+  ========================================
+  */
 
   if (loading) {
     return (
-      <div
-        style={{
-          textAlign: "center",
-          padding: "80px",
-        }}
-      >
-        <h2>
-          Loading Products...
-        </h2>
-      </div>
+      <main className="products-page">
+        <nav className="products-navbar">
+          <div
+            className="navbar-logo"
+            onClick={() => navigate("/")}
+          >
+            Kitchen Friend
+          </div>
+        </nav>
+
+        <div className="products-loading">
+          <div className="products-spinner"></div>
+          <p>Loading products...</p>
+        </div>
+      </main>
     );
   }
 
-  // =========================
-  // PAGE
-  // =========================
+  /*
+  ========================================
+  PAGE
+  ========================================
+  */
 
   return (
-    <div className="products-container">
+    <main className="products-page">
 
-      <h1>
-        Fresh Grocery Products
-      </h1>
+      {/* ================= NAVBAR ================= */}
 
-      <div className="top-bar">
+      <nav className="products-navbar">
 
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-        />
-
-        <select
-          value={category}
-          onChange={(e) =>
-            setCategory(e.target.value)
-          }
+        <div
+          className="navbar-logo"
+          onClick={() => navigate("/products")}
         >
-          {categories.map((cat) => (
-            <option
-              key={cat}
-              value={cat}
-            >
-              {cat}
-            </option>
-          ))}
-        </select>
-
-      </div>
-
-      {filteredProducts.length === 0 ? (
-
-        <div className="empty">
-          <h2>
-            No products found.
-          </h2>
+          <span>🥬</span>
+          Kitchen Friend
         </div>
 
-      ) : (
+        <div className="navbar-links">
 
-        <div className="products-grid">
+          <button
+            type="button"
+            className="navbar-link active"
+            onClick={() =>
+              navigate("/products")
+            }
+          >
+            🛍️ Products
+          </button>
 
-          {filteredProducts.map(
-            (product) => (
+          <button
+            type="button"
+            className="navbar-link"
+            onClick={() =>
+              navigate("/orders")
+            }
+          >
+            📦 Orders
+          </button>
 
-              <div
-                className="product-card"
-                key={product._id}
-              >
+          {/* CART */}
 
-                <img
-                  src={
-                    product.image
-                      ? `http://localhost:9003${product.image}`
-                      : "https://via.placeholder.com/300x220?text=No+Image"
-                  }
-                  alt={
-                    product.productName ||
-                    "Product image"
-                  }
-                  onError={(e) => {
-                    e.target.onerror = null;
+          <button
+            type="button"
+            className="navbar-cart-button"
+            onClick={() =>
+              navigate("/cart")
+            }
+          >
+            🛒 Cart
 
-                    e.target.src =
-                      "https://via.placeholder.com/300x220?text=No+Image";
-                  }}
-                />
+            {cartCount > 0 && (
+              <span className="cart-count">
+                {cartCount}
+              </span>
+            )}
+          </button>
 
-                <div className="product-body">
+          <button
+            type="button"
+            className="navbar-link"
+            onClick={() =>
+              navigate("/profile")
+            }
+          >
+            👤 Profile
+          </button>
 
-                  <h2>
-                    {product.productName ||
-                      "Unnamed Product"}
-                  </h2>
+          <button
+            type="button"
+            className="navbar-logout"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
 
-                  <p className="category">
-                    {product.category ||
-                      "Uncategorized"}
-                  </p>
+        </div>
+      </nav>
 
-                  <p className="description">
-                    {product.description ||
-                      "No description available."}
-                  </p>
+      {/* ================= CONTENT ================= */}
 
-                  <h3>
-                    ₹{product.price ?? "N/A"}
-                  </h3>
+      <div className="products-container">
 
-                  <p>
-                    Stock:{" "}
-                    <strong>
-                      {product.stock ?? 0}
-                    </strong>
-                  </p>
+        <div className="products-header">
+          <div>
+            <h1>Fresh Products</h1>
 
-                  <div className="buttons">
+            <p>
+              Fresh groceries delivered to
+              your doorstep.
+            </p>
+          </div>
+        </div>
 
-                    <button
-                      className="cart-btn"
-                      onClick={() =>
-                        addToCart(
-                          product._id
-                        )
-                      }
-                      disabled={
-                        !product.stock
-                      }
-                    >
-                      Add To Cart
-                    </button>
+        {error && (
+          <div className="products-error">
+            <p>{error}</p>
 
-                    <button
-                      className="buy-btn"
-                      onClick={() =>
-                        buyNow(product)
-                      }
-                      disabled={
-                        !product.stock
-                      }
-                    >
-                      Buy Now
-                    </button>
+            <button
+              type="button"
+              onClick={() =>
+                window.location.reload()
+              }
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!error &&
+          products.length === 0 && (
+            <div className="products-empty">
+              <div className="empty-icon">
+                🛒
+              </div>
+
+              <h2>No Products Available</h2>
+
+              <p>
+                There are currently no products
+                available.
+              </p>
+            </div>
+          )}
+
+        {!error &&
+          products.length > 0 && (
+            <div className="products-grid">
+
+              {products.map((product) => (
+                <article
+                  className="product-card"
+                  key={product._id}
+                >
+
+                  {/* IMAGE */}
+
+                  <div
+                    className="product-image-container"
+                    onClick={() =>
+                      navigate(
+                        `/products/${product._id}`
+                      )
+                    }
+                  >
+                    {product.image ? (
+                      <img
+                        src={
+                          product.image.startsWith(
+                            "http"
+                          )
+                            ? product.image
+                            : `http://localhost:9003${product.image}`
+                        }
+                        alt={
+                          product.productName
+                        }
+                        className="product-image"
+                      />
+                    ) : (
+                      <div className="no-product-image">
+                        🥬
+                      </div>
+                    )}
+
+                    {product.stock <= 0 && (
+                      <span className="out-of-stock">
+                        Out of Stock
+                      </span>
+                    )}
+                  </div>
+
+                  {/* DETAILS */}
+
+                  <div className="product-details">
+
+                    <span className="product-category">
+                      {product.category}
+                    </span>
+
+                    <h2>
+                      {product.productName}
+                    </h2>
+
+                    <p className="product-description">
+                      {product.description}
+                    </p>
+
+                    <div className="product-bottom">
+
+                      <div className="product-price">
+                        ₹
+                        {Number(
+                          product.price || 0
+                        ).toFixed(2)}
+                      </div>
+
+                      <span className="stock-text">
+                        {product.stock > 0
+                          ? `${product.stock} available`
+                          : "Out of stock"}
+                      </span>
+
+                    </div>
+
+                    <div className="product-actions">
+
+                      <button
+                        type="button"
+                        className="view-product-button"
+                        onClick={() =>
+                          navigate(
+                            `/products/${product._id}`
+                          )
+                        }
+                      >
+                        View
+                      </button>
+
+                      <button
+                        type="button"
+                        className="add-cart-button"
+                        disabled={
+                          product.stock <= 0 ||
+                          addingProduct ===
+                            product._id
+                        }
+                        onClick={() =>
+                          addToCart(
+                            product._id
+                          )
+                        }
+                      >
+                        {addingProduct ===
+                        product._id
+                          ? "Adding..."
+                          : product.stock <= 0
+                          ? "Out of Stock"
+                          : "🛒 Add to Cart"}
+                      </button>
+
+                    </div>
 
                   </div>
 
-                </div>
+                </article>
+              ))}
 
-              </div>
-
-            )
+            </div>
           )}
 
-        </div>
+      </div>
 
-      )}
-
-      <style>{`
-
-        * {
-          box-sizing: border-box;
-        }
-
-        .products-container {
-          max-width: 1300px;
-          margin: 40px auto;
-          padding: 20px;
-        }
-
-        .products-container h1 {
-          text-align: center;
-          margin-bottom: 30px;
-          color: #222;
-        }
-
-        .top-bar {
-          display: flex;
-          gap: 20px;
-          margin-bottom: 30px;
-          flex-wrap: wrap;
-        }
-
-        .top-bar input {
-          flex: 1;
-          min-width: 250px;
-          padding: 14px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          font-size: 16px;
-        }
-
-        .top-bar select {
-          width: 220px;
-          padding: 14px;
-          border: 1px solid #ddd;
-          border-radius: 8px;
-          font-size: 16px;
-        }
-
-        .products-grid {
-          display: grid;
-          grid-template-columns:
-            repeat(
-              auto-fit,
-              minmax(280px, 1fr)
-            );
-          gap: 25px;
-        }
-
-        .product-card {
-          background: #fff;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow:
-            0 8px 20px
-            rgba(0, 0, 0, 0.08);
-          transition: 0.3s;
-        }
-
-        .product-card:hover {
-          transform: translateY(-6px);
-        }
-
-        .product-card img {
-          width: 100%;
-          height: 230px;
-          object-fit: cover;
-        }
-
-        .product-body {
-          padding: 18px;
-        }
-
-        .product-body h2 {
-          margin: 0 0 10px;
-          font-size: 22px;
-        }
-
-        .category {
-          color: #ff5a1f;
-          font-weight: bold;
-        }
-
-        .description {
-          color: #666;
-          margin: 12px 0;
-          min-height: 55px;
-        }
-
-        .product-body h3 {
-          color: #0b8f36;
-          margin-bottom: 10px;
-        }
-
-        .buttons {
-          display: flex;
-          gap: 10px;
-          margin-top: 20px;
-        }
-
-        .buttons button {
-          flex: 1;
-          border: none;
-          cursor: pointer;
-          padding: 12px;
-          border-radius: 8px;
-          color: #fff;
-          font-size: 15px;
-          font-weight: 600;
-        }
-
-        .buttons button:disabled {
-          background: #ccc;
-          cursor: not-allowed;
-        }
-
-        .cart-btn {
-          background: #ff5a1f;
-        }
-
-        .buy-btn {
-          background: #0b8f36;
-        }
-
-        .cart-btn:hover {
-          background: #e64a19;
-        }
-
-        .buy-btn:hover {
-          background: #08752d;
-        }
-
-        .empty {
-          text-align: center;
-          margin-top: 80px;
-          color: #666;
-        }
-
-        @media (max-width: 768px) {
-
-          .top-bar {
-            flex-direction: column;
-          }
-
-          .top-bar select {
-            width: 100%;
-          }
-
-          .buttons {
-            flex-direction: column;
-          }
-
-        }
-
-      `}</style>
-
-    </div>
+    </main>
   );
 }
 

@@ -278,7 +278,7 @@ function Home() {
             >
               🛒 Shop as Buyer
             </button>
-
+ 
             <button
               className="hero-btn seller-btn"
               onClick={handleSeller}

@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function Register() {
@@ -27,167 +27,386 @@ function Register() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
+    if (loading) return;
+
+    const name = formData.name.trim();
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+    const confirmPassword = formData.confirmPassword;
+    const role = formData.role;
+
+    if (!name) {
+      alert("Please enter your full name.");
+      return;
+    }
+
+    if (!email) {
+      alert("Please enter your email.");
+      return;
+    }
+
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
       alert("Passwords do not match.");
       return;
     }
 
-    setLoading(true);
+    if (!["buyer", "seller"].includes(role)) {
+      alert("Please select a valid account type.");
+      return;
+    }
 
     try {
+      setLoading(true);
+
+      console.log("REGISTER REQUEST:", {
+        name,
+        email,
+        role,
+      });
+
       const response = await axios.post(
         "http://localhost:9003/user/register",
         {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
+          name,
+          email,
+          password,
+          role,
+        },
+        {
+          withCredentials: true,
         }
       );
 
-      console.log("Register Response:", response.data);
+      console.log("REGISTER RESPONSE:", response.data);
 
-      alert("Registration successful! Please verify your email.");
+      if (!response.data?.success) {
+        alert(
+          response.data?.message ||
+            "Registration failed."
+        );
+        return;
+      }
 
-      navigate("/check-email");
+      alert(
+        response.data?.message ||
+          "Registration successful! Please verify your email."
+      );
 
+      navigate("/check-email", {
+        replace: true,
+        state: {
+          email,
+        },
+      });
     } catch (error) {
-
-      console.error("Registration Error:", error);
+      console.error(
+        "REGISTRATION ERROR:",
+        error.response?.data || error
+      );
 
       alert(
         error.response?.data?.message ||
-        "Registration failed."
+          "Registration failed. Please try again."
       );
-
     } finally {
-
       setLoading(false);
-
     }
   };
 
   return (
     <main
       style={{
-        maxWidth: "450px",
-        margin: "50px auto",
-        padding: "30px",
-        border: "1px solid #ddd",
-        borderRadius: "10px",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "30px 15px",
+        background: "#f7f9f7",
       }}
     >
-      <h1 style={{ textAlign: "center" }}>
-        Create Your Account
-      </h1>
-
-      <form onSubmit={handleSubmit}>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label>Full Name</label>
-
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "10px" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label>Email</label>
-
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "10px" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label>Password</label>
-
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            minLength={6}
-            required
-            style={{ width: "100%", padding: "10px" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label>Confirm Password</label>
-
-          <input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            minLength={6}
-            required
-            style={{ width: "100%", padding: "10px" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "20px" }}>
-          <label>Account Type</label>
-
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            style={{
-              width: "100%",
-              padding: "10px",
-            }}
-          >
-            <option value="buyer">🛒 Buyer</option>
-            <option value="seller">🏪 Seller</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "12px",
-            background: "#ff5a1f",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-            borderRadius: "6px",
-          }}
-        >
-          {loading
-            ? "Creating Account..."
-            : "Create Account"}
-        </button>
-
-      </form>
-
-      <p
+      <div
         style={{
-          textAlign: "center",
-          marginTop: "20px",
+          width: "100%",
+          maxWidth: "450px",
+          padding: "32px",
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
+          borderRadius: "16px",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
         }}
       >
-        Already have an account?{" "}
-        <Link to="/login">
-          Login
-        </Link>
-      </p>
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "28px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "42px",
+              marginBottom: "10px",
+            }}
+          >
+            🛒
+          </div>
 
+          <h1
+            style={{
+              margin: 0,
+              color: "#222",
+            }}
+          >
+            Create Your Account
+          </h1>
+
+          <p
+            style={{
+              marginTop: "8px",
+              color: "#777",
+            }}
+          >
+            Join Kitchen Friend today
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: "17px" }}>
+            <label
+              htmlFor="name"
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: "600",
+              }}
+            >
+              Full Name
+            </label>
+
+            <input
+              id="name"
+              type="text"
+              name="name"
+              placeholder="Enter your full name"
+              value={formData.name}
+              onChange={handleChange}
+              autoComplete="name"
+              required
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "17px" }}>
+            <label
+              htmlFor="email"
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: "600",
+              }}
+            >
+              Email
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="email"
+              required
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "17px" }}>
+            <label
+              htmlFor="password"
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: "600",
+              }}
+            >
+              Password
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              name="password"
+              placeholder="Create a password"
+              value={formData.password}
+              onChange={handleChange}
+              minLength={6}
+              autoComplete="new-password"
+              required
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "17px" }}>
+            <label
+              htmlFor="confirmPassword"
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: "600",
+              }}
+            >
+              Confirm Password
+            </label>
+
+            <input
+              id="confirmPassword"
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              minLength={6}
+              autoComplete="new-password"
+              required
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: "22px" }}>
+            <label
+              htmlFor="role"
+              style={{
+                display: "block",
+                marginBottom: "7px",
+                fontWeight: "600",
+              }}
+            >
+              Account Type
+            </label>
+
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                boxSizing: "border-box",
+                background: "#fff",
+              }}
+            >
+              <option value="buyer">
+                🛒 Buyer
+              </option>
+
+              <option value="seller">
+                🏪 Seller
+              </option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "13px",
+              border: "none",
+              borderRadius: "8px",
+              background: loading
+                ? "#aaa"
+                : "#ff5a1f",
+              color: "#fff",
+              fontSize: "16px",
+              fontWeight: "700",
+              cursor: loading
+                ? "not-allowed"
+                : "pointer",
+            }}
+          >
+            {loading
+              ? "Creating Account..."
+              : "Create Account"}
+          </button>
+        </form>
+
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "22px",
+            color: "#666",
+          }}
+        >
+          Already have an account?{" "}
+          <Link
+            to="/login"
+            style={{
+              color: "#ff5a1f",
+              fontWeight: "600",
+              textDecoration: "none",
+            }}
+          >
+            Login
+          </Link>
+        </p>
+
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "15px",
+          }}
+        >
+          <Link
+            to="/"
+            style={{
+              color: "#666",
+              textDecoration: "none",
+            }}
+          >
+            ← Back to Home
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }
 
 export default Register;
+
