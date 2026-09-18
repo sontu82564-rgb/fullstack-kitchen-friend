@@ -1,167 +1,590 @@
-import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 function Navbar() {
+  const [user, setUser] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const navigate = useNavigate();
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
 
-
-  const handleLogout = async () => {
-
-    try {
-
-      const response = await axios.post(
-        "http://localhost:9003/user/logout",
-        {},
-        {
-          withCredentials: true,
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        } else {
+          setUser(null);
         }
-      );
-
-
-      if (response.data.success) {
-
-        alert("Logout successful");
-
-        navigate("/login");
-
+      } catch (error) {
+        console.error("Invalid user data:", error);
+        localStorage.removeItem("user");
+        setUser(null);
       }
+    };
 
-    } catch (error) {
+    loadUser();
 
-      console.error(
-        "LOGOUT ERROR:",
-        error
-      );
+    window.addEventListener("storage", loadUser);
 
-      alert(
-        error.response?.data?.message ||
-        "Logout failed"
-      );
+    return () => {
+      window.removeEventListener("storage", loadUser);
+    };
+  }, []);
 
-    }
+  const closeMenu = () => {
+    setMenuOpen(false);
   };
 
-
   return (
+    <>
+      <nav className="navbar">
+        <div className="navbar-container">
 
-    <nav className="navbar">
+          {/* NAVIGATION LINKS */}
+          <div className="desktop-nav">
 
-      <div className="logo">
-        🛒 Kitchen Friend
-      </div>
+            <Link
+              to="/"
+              className="nav-link"
+            >
+              Home
+            </Link>
 
+            {user?.role === "buyer" && (
+              <>
+                <Link
+                  to="/products"
+                  className="nav-link"
+                >
+                  Products
+                </Link>
 
-      <div className="nav-links">
+                <Link
+                  to="/cart"
+                  className="nav-link"
+                >
+                  🛒 Cart
+                </Link>
 
-        <Link to="/">
-          Home
-        </Link>
+                <Link
+                  to="/orders"
+                  className="nav-link"
+                >
+                  Orders
+                </Link>
 
-        <Link to="/products">
-          Products
-        </Link>
+                <Link
+                  to="/profile"
+                  className="nav-link"
+                >
+                  Profile
+                </Link>
+              </>
+            )}
 
-        <Link to="/cart">
-          Cart
-        </Link>
+            {user?.role === "seller" && (
+              <>
+                <Link
+                  to="/seller/dashboard"
+                  className="nav-link"
+                >
+                  Dashboard
+                </Link>
 
-        <Link to="/profile">
-          Profile
-        </Link>
+                <Link
+                  to="/seller/products"
+                  className="nav-link"
+                >
+                  My Products
+                </Link>
 
+                <Link
+                  to="/seller/orders"
+                  className="nav-link"
+                >
+                  Orders
+                </Link>
 
-        <button
-          className="logout-btn"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
+                <Link
+                  to="/profile"
+                  className="nav-link"
+                >
+                  Profile
+                </Link>
+              </>
+            )}
 
-      </div>
+          </div>
 
+          {/* DESKTOP AUTH BUTTONS */}
+          <div className="navbar-actions">
+
+            {!user ? (
+              <>
+                <Link
+                  to="/login"
+                  className="login-button"
+                >
+                  Login
+                </Link>
+
+                <Link
+                  to="/signup"
+                  className="signup-button"
+                >
+                  Sign Up
+                </Link>
+              </>
+            ) : (
+              <span className="welcome-text">
+                Hi, {user.name || "User"} 👋
+              </span>
+            )}
+
+          </div>
+
+          {/* MOBILE MENU BUTTON */}
+          <button
+            type="button"
+            className="mobile-menu-button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+
+        </div>
+
+        {/* MOBILE MENU */}
+        {menuOpen && (
+          <div className="mobile-menu">
+
+            <Link
+              to="/"
+              className="mobile-nav-link"
+              onClick={closeMenu}
+            >
+              🏠 Home
+            </Link>
+
+            {user?.role === "buyer" && (
+              <>
+                <Link
+                  to="/products"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  🛍️ Products
+                </Link>
+
+                <Link
+                  to="/cart"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  🛒 Cart
+                </Link>
+
+                <Link
+                  to="/orders"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  📦 Orders
+                </Link>
+
+                <Link
+                  to="/profile"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  👤 Profile
+                </Link>
+              </>
+            )}
+
+            {user?.role === "seller" && (
+              <>
+                <Link
+                  to="/seller/dashboard"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  📊 Dashboard
+                </Link>
+
+                <Link
+                  to="/seller/products"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  🛍️ My Products
+                </Link>
+
+                <Link
+                  to="/seller/orders"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  📦 Orders
+                </Link>
+
+                <Link
+                  to="/profile"
+                  className="mobile-nav-link"
+                  onClick={closeMenu}
+                >
+                  👤 Profile
+                </Link>
+              </>
+            )}
+
+            {!user && (
+              <div className="mobile-auth-buttons">
+
+                <Link
+                  to="/login"
+                  className="mobile-login-button"
+                  onClick={closeMenu}
+                >
+                  Login
+                </Link>
+
+                <Link
+                  to="/signup"
+                  className="mobile-signup-button"
+                  onClick={closeMenu}
+                >
+                  Sign Up
+                </Link>
+
+              </div>
+            )}
+
+            {user && (
+              <div className="mobile-welcome">
+                Hi, {user.name || "User"} 👋
+              </div>
+            )}
+
+          </div>
+        )}
+      </nav>
 
       <style>{`
+        .navbar,
+        .navbar * {
+          box-sizing: border-box;
+        }
 
         .navbar {
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          width: 100%;
+
+          background: rgba(255, 255, 255, 0.97);
+
+          border-bottom: 1px solid #e5ebe5;
+
+          box-shadow:
+            0 4px 18px rgba(0, 0, 0, 0.05);
+
+          backdrop-filter: blur(12px);
+        }
+
+        .navbar-container {
+          width: 100%;
+          max-width: 1250px;
+          min-height: 72px;
+
+          margin: 0 auto;
+          padding: 0 24px;
+
           display: flex;
+          align-items: center;
           justify-content: space-between;
-          align-items: center;
 
-          padding: 18px 50px;
-
-          background: #2e7d32;
-          color: white;
+          gap: 20px;
         }
 
+        /* DESKTOP NAVIGATION */
 
-        .logo {
-          font-size: 26px;
-          font-weight: bold;
-        }
-
-
-        .nav-links {
+        .desktop-nav {
           display: flex;
           align-items: center;
-          gap: 22px;
+          gap: 5px;
         }
 
+        .nav-link {
+          padding: 10px 14px;
 
-        .nav-links a {
-          color: white;
+          color: #465047;
+
           text-decoration: none;
-          font-weight: 600;
+
+          font-size: 14px;
+          font-weight: 650;
+
+          border-radius: 9px;
+
+          transition:
+            color 0.2s ease,
+            background 0.2s ease;
         }
 
-
-        .nav-links a:hover {
-          opacity: 0.8;
+        .nav-link:hover {
+          color: #2e7d32;
+          background: #f1f8f1;
         }
 
+        /* RIGHT SIDE */
 
-        .logout-btn {
-          border: none;
+        .navbar-actions {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+        }
 
-          padding: 10px 20px;
+        .login-button {
+          padding: 10px 17px;
 
-          border-radius: 25px;
+          color: #3f4841;
 
-          background: #ff5a1f;
-          color: white;
+          text-decoration: none;
 
-          font-weight: bold;
+          font-size: 14px;
+          font-weight: 700;
+
+          border: 1px solid #dce4dd;
+          border-radius: 9px;
+
+          background: #ffffff;
+
+          transition: 0.2s ease;
+        }
+
+        .login-button:hover {
+          color: #2e7d32;
+          border-color: #43a047;
+          background: #f5fbf5;
+        }
+
+        .signup-button {
+          padding: 11px 19px;
+
+          color: #ffffff;
+
+          text-decoration: none;
+
+          font-size: 14px;
+          font-weight: 750;
+
+          border-radius: 9px;
+
+          background: linear-gradient(
+            135deg,
+            #43a047,
+            #2e7d32
+          );
+
+          box-shadow:
+            0 6px 15px rgba(46, 125, 50, 0.2);
+
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+        }
+
+        .signup-button:hover {
+          transform: translateY(-1px);
+
+          box-shadow:
+            0 9px 20px rgba(46, 125, 50, 0.27);
+        }
+
+        .welcome-text {
+          padding: 10px 14px;
+
+          color: #3f4a42;
+
+          font-size: 14px;
+          font-weight: 700;
+
+          border-radius: 9px;
+
+          background: #f1f8f1;
+        }
+
+        /* MOBILE BUTTON */
+
+        .mobile-menu-button {
+          display: none;
+
+          width: 42px;
+          height: 42px;
+
+          align-items: center;
+          justify-content: center;
+
+          border: 1px solid #dfe7df;
+          border-radius: 10px;
+
+          background: #f8faf8;
+
+          color: #344139;
+
+          font-size: 22px;
 
           cursor: pointer;
-
-          transition: 0.3s;
         }
 
+        /* MOBILE MENU */
 
-        .logout-btn:hover {
-          background: #e64a19;
-          transform: translateY(-2px);
+        .mobile-menu {
+          display: none;
         }
 
+        /* TABLET */
 
-        @media (max-width: 700px) {
+        @media (max-width: 800px) {
+          .navbar-container {
+            padding: 0 17px;
+          }
 
-          .navbar {
+          .nav-link {
+            padding: 9px 10px;
+            font-size: 13px;
+          }
+
+          .login-button,
+          .signup-button {
+            padding-left: 12px;
+            padding-right: 12px;
+          }
+        }
+
+        /* MOBILE */
+
+        @media (max-width: 650px) {
+          .navbar-container {
+            min-height: 66px;
+            padding: 0 15px;
+          }
+
+          .desktop-nav,
+          .navbar-actions {
+            display: none;
+          }
+
+          .mobile-menu-button {
+            display: flex;
+          }
+
+          .mobile-menu {
+            display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 6px;
+
+            padding: 12px 15px 18px;
+
+            border-top: 1px solid #edf1ed;
+
+            background: #ffffff;
+
+            box-shadow:
+              0 10px 25px rgba(0, 0, 0, 0.06);
           }
 
-          .nav-links {
-            flex-wrap: wrap;
-            justify-content: center;
+          .mobile-nav-link {
+            display: block;
+
+            padding: 13px 14px;
+
+            color: #414b43;
+
+            text-decoration: none;
+
+            font-size: 14px;
+            font-weight: 650;
+
+            border-radius: 10px;
+
+            transition: 0.2s ease;
           }
 
+          .mobile-nav-link:hover {
+            color: #2e7d32;
+            background: #f1f8f1;
+          }
+
+          .mobile-auth-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+
+            gap: 9px;
+
+            margin-top: 8px;
+          }
+
+          .mobile-login-button,
+          .mobile-signup-button {
+            padding: 12px;
+
+            text-align: center;
+
+            text-decoration: none;
+
+            font-size: 14px;
+            font-weight: 700;
+
+            border-radius: 9px;
+          }
+
+          .mobile-login-button {
+            color: #3f4841;
+
+            border: 1px solid #dce4dd;
+            background: #ffffff;
+          }
+
+          .mobile-signup-button {
+            color: #ffffff;
+
+            background: linear-gradient(
+              135deg,
+              #43a047,
+              #2e7d32
+            );
+          }
+
+          .mobile-welcome {
+            padding: 12px 14px;
+
+            color: #2e7d32;
+
+            font-size: 14px;
+            font-weight: 700;
+
+            border-radius: 10px;
+
+            background: #f1f8f1;
+          }
         }
 
+        @media (max-width: 380px) {
+          .navbar-container {
+            padding: 0 10px;
+          }
+
+          .mobile-menu {
+            padding-left: 10px;
+            padding-right: 10px;
+          }
+        }
       `}</style>
-
-    </nav>
-
+    </>
   );
 }
 

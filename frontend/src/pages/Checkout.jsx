@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -37,19 +36,26 @@ function Checkout() {
 
         if (!isMounted) return;
 
+        console.log("CHECKOUT CART RESPONSE:", response.data);
+
         const items =
-          response.data?.cart?.items || [];
+          response.data?.cart?.items ||
+          response.data?.items ||
+          [];
 
         setCart(
           Array.isArray(items) ? items : []
         );
       } catch (err) {
-        console.error("CHECKOUT CART ERROR:", err);
+        console.error(
+          "CHECKOUT CART ERROR:",
+          err.response?.data || err.message
+        );
 
         if (!isMounted) return;
 
         if (err.response?.status === 401) {
-          navigate("/login");
+          navigate("/login", { replace: true });
           return;
         }
 
@@ -72,7 +78,22 @@ function Checkout() {
   }, [navigate]);
 
   const getProduct = (item) => {
-    return item?.product || item?.productId || item;
+    return (
+      item?.product ||
+      item?.productId ||
+      item
+    );
+  };
+
+  const getProductId = (item) => {
+    const product = getProduct(item);
+
+    return (
+      product?._id ||
+      product?.id ||
+      item?.productId ||
+      ""
+    );
   };
 
   const getProductName = (item) => {
@@ -91,8 +112,18 @@ function Checkout() {
     return Number(product?.price || 0);
   };
 
+  const getProductImage = (item) => {
+    const product = getProduct(item);
+
+    return product?.image || "";
+  };
+
   const getQuantity = (item) => {
-    return Number(item?.quantity || 1);
+    const quantity = Number(item?.quantity || 1);
+
+    return Number.isInteger(quantity) && quantity > 0
+      ? quantity
+      : 1;
   };
 
   const subtotal = cart.reduce(
@@ -104,6 +135,7 @@ function Checkout() {
   );
 
   const deliveryCharge = subtotal > 0 ? 40 : 0;
+
   const total = subtotal + deliveryCharge;
 
   const handleChange = (e) => {
@@ -113,42 +145,130 @@ function Checkout() {
       ...previous,
       [name]: value,
     }));
+
+    setError("");
   };
 
   const placeOrder = async (e) => {
     e.preventDefault();
+
+    if (placingOrder) return;
+
+    setError("");
 
     if (cart.length === 0) {
       setError("Your cart is empty.");
       return;
     }
 
+    // Convert cart items into the format required
+    // by the Order schema.
+    const orderItems = cart
+      .map((item) => {
+        const product = getProduct(item);
+
+        const productId = getProductId(item);
+        const productName = getProductName(item);
+        const price = getProductPrice(item);
+        const quantity = getQuantity(item);
+        const image = getProductImage(item);
+
+        return {
+          product: productId,
+          productName,
+          price,
+          quantity,
+          image,
+        };
+      })
+      .filter(
+        (item) =>
+          item.product &&
+          item.productName &&
+          item.price >= 0 &&
+          item.quantity > 0
+      );
+
+    console.log("ORDER ITEMS:", orderItems);
+
+    if (orderItems.length === 0) {
+      setError(
+        "Your cart does not contain valid products. Please return to the products page and add the product again."
+      );
+      return;
+    }
+
+    const orderData = {
+      items: orderItems,
+
+      shippingAddress: {
+        fullName: formData.fullName.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
+      },
+
+      subtotal,
+      deliveryCharge,
+      totalAmount: total,
+
+      paymentMethod: "COD",
+    };
+
+    console.log("FINAL ORDER DATA:", orderData);
+
     try {
       setPlacingOrder(true);
-      setError("");
 
       const response = await axios.post(
         `${API_URL}/orders`,
-        {
-          ...formData,
-          paymentMethod: "COD",
-        },
+        orderData,
         {
           withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
+      );
+
+      console.log(
+        "ORDER RESPONSE:",
+        response.data
       );
 
       if (response.data?.success) {
         alert("Order placed successfully!");
 
-        navigate("/orders");
+        navigate("/orders", {
+          replace: true,
+        });
+
+        return;
       }
+
+      setError(
+        response.data?.message ||
+          "Unable to place order."
+      );
     } catch (err) {
-      console.error("PLACE ORDER ERROR:", err);
+      console.error(
+        "PLACE ORDER ERROR:",
+        err.response?.data || err.message
+      );
+
+      if (err.response?.status === 401) {
+        navigate("/login", {
+          replace: true,
+        });
+        return;
+      }
 
       setError(
         err.response?.data?.message ||
-          "Unable to place order."
+          err.response?.data?.error ||
+          "Unable to place order. Please try again."
       );
     } finally {
       setPlacingOrder(false);
@@ -199,8 +319,11 @@ function Checkout() {
         </div>
 
         {error && (
-          <div className="checkout-error">
-            {error}
+          <div
+            className="checkout-error"
+            role="alert"
+          >
+            ⚠️ {error}
           </div>
         )}
 
@@ -210,22 +333,29 @@ function Checkout() {
 
             <form onSubmit={placeOrder}>
               <div className="form-group">
-                <label>Full Name</label>
+                <label htmlFor="fullName">
+                  Full Name
+                </label>
 
                 <input
+                  id="fullName"
                   type="text"
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder="Enter your full name"
                   required
+                  disabled={placingOrder}
                 />
               </div>
 
               <div className="form-group">
-                <label>Phone Number</label>
+                <label htmlFor="phone">
+                  Phone Number
+                </label>
 
                 <input
+                  id="phone"
                   type="tel"
                   name="phone"
                   value={formData.phone}
@@ -234,53 +364,69 @@ function Checkout() {
                   pattern="[0-9]{10}"
                   maxLength="10"
                   required
+                  disabled={placingOrder}
                 />
               </div>
 
               <div className="form-group">
-                <label>Address</label>
+                <label htmlFor="address">
+                  Address
+                </label>
 
                 <textarea
+                  id="address"
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="House number, street, area"
                   required
+                  disabled={placingOrder}
                 />
               </div>
 
               <div className="checkout-row">
                 <div className="form-group">
-                  <label>City</label>
+                  <label htmlFor="city">
+                    City
+                  </label>
 
                   <input
+                    id="city"
                     type="text"
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="City"
                     required
+                    disabled={placingOrder}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>State</label>
+                  <label htmlFor="state">
+                    State
+                  </label>
 
                   <input
+                    id="state"
                     type="text"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
                     placeholder="State"
                     required
+                    disabled={placingOrder}
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>PIN Code</label>
+                <label htmlFor="pincode">
+                  PIN Code
+                </label>
 
                 <input
+                  id="pincode"
                   type="text"
                   name="pincode"
                   value={formData.pincode}
@@ -289,6 +435,7 @@ function Checkout() {
                   pattern="[0-9]{6}"
                   maxLength="6"
                   required
+                  disabled={placingOrder}
                 />
               </div>
 
@@ -337,7 +484,7 @@ function Checkout() {
                 <div
                   className="checkout-item"
                   key={
-                    getProduct(item)?._id ||
+                    getProductId(item) ||
                     index
                   }
                 >
@@ -364,6 +511,7 @@ function Checkout() {
 
             <div className="checkout-summary-row">
               <span>Subtotal</span>
+
               <span>
                 ₹{subtotal.toFixed(2)}
               </span>
@@ -371,6 +519,7 @@ function Checkout() {
 
             <div className="checkout-summary-row">
               <span>Delivery</span>
+
               <span>
                 ₹{deliveryCharge.toFixed(2)}
               </span>

@@ -40,21 +40,21 @@ export const register = async (req, res) => {
     );
 
     // Save pending user
-    await PendingUser.create({
-      name,
-      email: email.toLowerCase(),
-      password,
-      role: role || "buyer",
-      verificationToken: token,
-      verificationTokenExpires: tokenExpires,
-    });
+    // await PendingUser.create({
+    //   name,
+    //   email: email.toLowerCase(),
+    //   password,
+    //   role: role || "buyer",
+    //   verificationToken: token,
+    //   verificationTokenExpires: tokenExpires,
+    // });
 
     // Send verification email
     await verifyMail(token, email);
 
     return res.status(201).json({
       success: true,
-      message: "Please check your email to verify your account.",
+      message: "Please click the link to verify to account.",
     });
 
   } catch (error) {

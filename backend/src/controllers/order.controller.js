@@ -64,12 +64,12 @@ export const createOrder = async (req, res) => {
     if (paymentMethod !== "COD") {
       return res.status(400).json({
         success: false,
-        message: "Only Cash on Delivery is currently supported",
+        message:
+          "Only Cash on Delivery is currently supported",
       });
     }
 
     const orderItems = [];
-
     let subtotal = 0;
 
     /*
@@ -98,7 +98,11 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      if (!mongoose.Types.ObjectId.isValid(item.product)) {
+      if (
+        !mongoose.Types.ObjectId.isValid(
+          item.product
+        )
+      ) {
         return res.status(400).json({
           success: false,
           message: "Invalid product ID",
@@ -112,7 +116,8 @@ export const createOrder = async (req, res) => {
       if (!product) {
         return res.status(404).json({
           success: false,
-          message: "One of the products was not found",
+          message:
+            "One of the products was not found",
         });
       }
 
@@ -123,7 +128,8 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      const itemTotal = product.price * quantity;
+      const itemTotal =
+        product.price * quantity;
 
       subtotal += itemTotal;
 
@@ -138,12 +144,11 @@ export const createOrder = async (req, res) => {
 
     /*
     ------------------------------------------
-    DELIVERY CHARGE
+    DELIVERY
     ------------------------------------------
     */
 
     const deliveryCharge = 40;
-
     const totalAmount =
       subtotal + deliveryCharge;
 
@@ -192,55 +197,39 @@ export const createOrder = async (req, res) => {
       items: orderItems,
 
       shippingAddress: {
-        fullName:
-          String(
-            shippingAddress.fullName
-          ).trim(),
+        fullName: String(
+          shippingAddress.fullName
+        ).trim(),
 
-        phone:
-          String(
-            shippingAddress.phone
-          ).trim(),
+        phone: String(
+          shippingAddress.phone
+        ).trim(),
 
-        address:
-          String(
-            shippingAddress.address
-          ).trim(),
+        address: String(
+          shippingAddress.address
+        ).trim(),
 
-        city:
-          String(
-            shippingAddress.city
-          ).trim(),
+        city: String(
+          shippingAddress.city
+        ).trim(),
 
-        state:
-          String(
-            shippingAddress.state
-          ).trim(),
+        state: String(
+          shippingAddress.state
+        ).trim(),
 
-        pincode:
-          String(
-            shippingAddress.pincode
-          ).trim(),
+        pincode: String(
+          shippingAddress.pincode
+        ).trim(),
       },
 
       subtotal,
-
       deliveryCharge,
-
       totalAmount,
 
       paymentMethod: "COD",
-
       paymentStatus: "Pending",
-
       orderStatus: "Pending",
     });
-
-    /*
-    ------------------------------------------
-    RESPONSE
-    ------------------------------------------
-    */
 
     return res.status(201).json({
       success: true,
@@ -269,7 +258,8 @@ GET /user/orders
 */
 export const getMyOrders = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId =
+      req.user?.id || req.user?._id;
 
     if (!userId) {
       return res.status(401).json({
@@ -330,7 +320,7 @@ export const getSellerOrders = async (
 
     /*
     ------------------------------------------
-    FIND ORDERS CONTAINING SELLER PRODUCTS
+    FIND SELLER PRODUCTS
     ------------------------------------------
     */
 
@@ -343,6 +333,19 @@ export const getSellerOrders = async (
       sellerProducts.map(
         (product) => product._id
       );
+
+    if (sellerProductIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        orders: [],
+      });
+    }
+
+    /*
+    ------------------------------------------
+    FIND ORDERS
+    ------------------------------------------
+    */
 
     const orders = await Order.find({
       "items.product": {
@@ -363,25 +366,27 @@ export const getSellerOrders = async (
 
     /*
     ------------------------------------------
-    RETURN ONLY SELLER'S ITEMS
+    RETURN ONLY SELLER ITEMS
     ------------------------------------------
     */
 
     const sellerOrders = orders.map(
       (order) => {
         const sellerItems =
-          order.items.filter((item) => {
-            return (
-              item.product &&
-              item.product.seller &&
-              item.product.seller.toString() ===
-                sellerId.toString()
-            );
-          });
+          order.items.filter(
+            (item) => {
+              return (
+                item.product &&
+                item.product.seller &&
+                item.product.seller
+                  .toString() ===
+                  sellerId.toString()
+              );
+            }
+          );
 
         return {
           ...order.toObject(),
-
           items: sellerItems,
         };
       }
@@ -399,7 +404,8 @@ export const getSellerOrders = async (
 
     return res.status(500).json({
       success: false,
-      message: "Unable to fetch seller orders",
+      message:
+        "Unable to fetch seller orders",
       error: error.message,
     });
   }
@@ -419,7 +425,17 @@ export const updateSellerOrderStatus =
 
       const { id } = req.params;
 
-      const { orderStatus } = req.body;
+      /*
+      Accept:
+      { orderStatus: "Confirmed" }
+
+      Also accept:
+      { status: "Confirmed" }
+      */
+
+      const receivedStatus =
+        req.body?.orderStatus ||
+        req.body?.status;
 
       if (!sellerId) {
         return res.status(401).json({
@@ -428,12 +444,20 @@ export const updateSellerOrderStatus =
         });
       }
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
+      if (
+        !mongoose.Types.ObjectId.isValid(id)
+      ) {
         return res.status(400).json({
           success: false,
           message: "Invalid order ID",
         });
       }
+
+      /*
+      ------------------------------------------
+      ALLOWED STATUSES
+      ------------------------------------------
+      */
 
       const allowedStatuses = [
         "Pending",
@@ -445,15 +469,52 @@ export const updateSellerOrderStatus =
       ];
 
       if (
-        !allowedStatuses.includes(
-          orderStatus
-        )
+        typeof receivedStatus !== "string" ||
+        !receivedStatus.trim()
       ) {
         return res.status(400).json({
           success: false,
-          message: "Invalid order status",
+          message:
+            "Order status is required",
+          allowedStatuses,
         });
       }
+
+      /*
+      ------------------------------------------
+      NORMALIZE STATUS
+      ------------------------------------------
+      */
+
+      const statusMap = {
+        pending: "Pending",
+        confirmed: "Confirmed",
+        processing: "Processing",
+        shipped: "Shipped",
+        delivered: "Delivered",
+        cancelled: "Cancelled",
+      };
+
+      const normalizedStatus =
+        statusMap[
+          receivedStatus
+            .trim()
+            .toLowerCase()
+        ];
+
+      if (!normalizedStatus) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid order status",
+          allowedStatuses,
+        });
+      }
+
+      /*
+      ------------------------------------------
+      FIND ORDER
+      ------------------------------------------
+      */
 
       const order =
         await Order.findById(id).populate(
@@ -470,19 +531,22 @@ export const updateSellerOrderStatus =
 
       /*
       ------------------------------------------
-      CHECK SELLER OWNS AT LEAST ONE ITEM
+      CHECK SELLER OWNERSHIP
       ------------------------------------------
       */
 
       const sellerOwnsItem =
-        order.items.some((item) => {
-          return (
-            item.product &&
-            item.product.seller &&
-            item.product.seller.toString() ===
-              sellerId.toString()
-          );
-        });
+        order.items.some(
+          (item) => {
+            return (
+              item.product &&
+              item.product.seller &&
+              item.product.seller
+                .toString() ===
+                sellerId.toString()
+            );
+          }
+        );
 
       if (!sellerOwnsItem) {
         return res.status(403).json({
@@ -492,7 +556,14 @@ export const updateSellerOrderStatus =
         });
       }
 
-      order.orderStatus = orderStatus;
+      /*
+      ------------------------------------------
+      UPDATE
+      ------------------------------------------
+      */
+
+      order.orderStatus =
+        normalizedStatus;
 
       await order.save();
 
